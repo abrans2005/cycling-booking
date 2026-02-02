@@ -8,6 +8,7 @@ import { BookingForm } from '@/sections/BookingForm';
 import { SuccessModal } from '@/sections/SuccessModal';
 import { MyBookings } from '@/sections/MyBookings';
 import { useBooking, useConfig } from '@/hooks/useBookingRealtime';
+import { useUser } from '@/hooks/useUser';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2 } from 'lucide-react';
@@ -23,9 +24,22 @@ const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'cycling2024';
 // 主预约页面
 function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void; onAdminClick: () => void }) {
   const { config } = useConfig();
+  const { userInfo, isLoggedIn, isWechat, login, logout } = useUser();
   const { formData, updateFormData, showSuccess, lastBooking, error, submitBooking, closeSuccess } = useBooking(config.pricePerHour);
 
   useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  // 用户登录后自动填充信息
+  useEffect(() => {
+    if (isLoggedIn && userInfo) {
+      if (!formData.memberName && userInfo.nickname) {
+        updateFormData('memberName', userInfo.nickname);
+      }
+      if (!formData.memberPhone && userInfo.phone) {
+        updateFormData('memberPhone', userInfo.phone);
+      }
+    }
+  }, [isLoggedIn, userInfo]);
 
   const canSubmit = formData.date && formData.startTime && formData.stationId && formData.memberName.trim() && formData.memberPhone.trim();
 
@@ -53,7 +67,41 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
 
       <Header />
 
-      <main className="pb-8">
+      {/* 用户登录状态栏 */}
+      <div className="px-4 pt-2">
+        {isLoggedIn ? (
+          <div className="bg-white rounded-xl px-4 py-3 flex items-center justify-between shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+                {userInfo?.avatarUrl ? (
+                  <img src={userInfo.avatarUrl} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-800">{userInfo?.nickname || '微信用户'}</p>
+                <p className="text-xs text-gray-500">已登录</p>
+              </div>
+            </div>
+            <button onClick={logout} className="text-xs text-gray-400 hover:text-gray-600">
+              退出
+            </button>
+          </div>
+        ) : (
+          <button 
+            onClick={login}
+            className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl px-4 py-3 flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-transform"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.49.49 0 0 1 .176-.554C23.005 18.12 24 16.458 24 14.64c0-3.254-3.06-5.68-7.062-5.782zm-2.091 2.696c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+            </svg>
+            <span className="font-medium">{isWechat ? '微信一键登录' : '快速登录'}</span>
+          </button>
+        )}
+      </div>
+
+      <main className="pb-8 pt-4">
         <DateSelector selectedDate={formData.date} onSelectDate={handleSelectDate} />
         <TimeSelector selectedTime={formData.startTime} onSelectTime={handleSelectTime} selectedDate={formData.date} />
         <DurationSelector duration={formData.duration} onSelectDuration={(d) => { updateFormData('duration', d); updateFormData('stationId', null); }} />
