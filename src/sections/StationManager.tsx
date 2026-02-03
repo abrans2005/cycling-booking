@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Trash2, Wrench, Power, AlertCircle, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +33,16 @@ export function StationManager({
   const [newModelName, setNewModelName] = useState('');
   const [newModelDesc, setNewModelDesc] = useState('');
   const [showAddModel, setShowAddModel] = useState(false);
+
+  // 当弹窗打开时，同步最新的数据
+  useEffect(() => {
+    if (isOpen) {
+      setEditingStations(stations);
+      setEditingModels(bikeModels);
+      setError('');
+      setExpandedStation(null);
+    }
+  }, [isOpen, stations, bikeModels]);
 
   // 检查骑行台是否有未来预约
   const checkStationBookings = (stationId: number): Booking[] => {
