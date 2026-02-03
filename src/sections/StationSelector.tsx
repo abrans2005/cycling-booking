@@ -33,15 +33,17 @@ export function StationSelector({
 }: StationSelectorProps) {
   const stations = useBikeStations();
   const { config } = useConfig();
-  const [timeAvailableStationIds, setTimeAvailableStationIds] = useState<number[]>([1, 2, 3, 4]);
+  const [timeAvailableStationIds, setTimeAvailableStationIds] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
   // 获取所有可用的骑行台（status === 'available'）
   const availableStations = useMemo(() => {
-    const stationConfigs: StationConfig[] = config?.stations || [];
+    if (!config?.stations) return stations; // 如果配置未加载，显示所有
+    const stationConfigs: StationConfig[] = config.stations;
     return stations.filter(station => {
       const stationConfig = stationConfigs.find((s: StationConfig) => s.stationId === station.id);
-      return stationConfig?.status === 'available';
+      // 如果没有找到配置，默认显示；如果找到配置，只有 status === 'available' 才显示
+      return !stationConfig || stationConfig.status === 'available';
     });
   }, [stations, config?.stations]);
 
@@ -64,10 +66,23 @@ export function StationSelector({
     return stationConfig?.status || 'available';
   };
 
+  // 当初始化或可用骑行台列表变化时，更新 timeAvailableStationIds
+  useEffect(() => {
+    setTimeAvailableStationIds(availableStations.map(s => s.id));
+  }, [availableStations.length]);
+
+  // 当日期、时间变化时检查可用性
   useEffect(() => {
     const checkAvailability = async () => {
+      // 如果没有选择日期或时间，初始化所有可用骑行台
       if (!selectedDate || !selectedTime) {
         setTimeAvailableStationIds(availableStations.map(s => s.id));
+        return;
+      }
+
+      // 如果没有可用骑行台，直接返回
+      if (availableStations.length === 0) {
+        setTimeAvailableStationIds([]);
         return;
       }
 
@@ -92,7 +107,8 @@ export function StationSelector({
           }
         }
         setTimeAvailableStationIds(available);
-      } catch {
+      } catch (err) {
+        console.error('检查可用性失败:', err);
         setTimeAvailableStationIds(availableStations.map(s => s.id));
       } finally {
         setLoading(false);
@@ -100,7 +116,7 @@ export function StationSelector({
     };
 
     checkAvailability();
-  }, [selectedDate, selectedTime, duration, availableStations]);
+  }, [selectedDate, selectedTime, duration, availableStations.length]); // 使用 length 避免对象引用变化
 
   const isTimeAvailable = (stationId: number) => {
     return timeAvailableStationIds.includes(stationId);

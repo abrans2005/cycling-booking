@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { api } from '@/lib/supabase';
 import type { Booking, BookingFormData, AppConfig } from '@/types';
 
@@ -26,16 +26,6 @@ export const useTimeSlots = () => {
       };
     });
   }, [])();
-};
-
-// 骑行台数据
-export const useBikeStations = () => {
-  return [
-    { id: 1, name: '1号骑行台', bikeModelId: 'stages', status: 'available' as const },
-    { id: 2, name: '2号骑行台', bikeModelId: 'stages', status: 'available' as const },
-    { id: 3, name: '3号骑行台', bikeModelId: 'neo', status: 'available' as const },
-    { id: 4, name: '4号骑行台', bikeModelId: 'neo', status: 'available' as const },
-  ];
 };
 
 // 默认配置
@@ -76,6 +66,31 @@ export const useConfig = () => {
   }, [loadConfig]);
 
   return { config, loading, reloadConfig: loadConfig };
+};
+
+// 骑行台数据 Hook - 从配置中动态获取
+export const useBikeStations = () => {
+  const { config } = useConfig();
+  
+  // 从配置中构建骑行台列表
+  return useMemo(() => {
+    if (!config?.stations || config.stations.length === 0) {
+      // 默认返回4个骑行台
+      return [
+        { id: 1, name: '1号骑行台', bikeModelId: 'stages', status: 'available' as const },
+        { id: 2, name: '2号骑行台', bikeModelId: 'stages', status: 'available' as const },
+        { id: 3, name: '3号骑行台', bikeModelId: 'neo', status: 'available' as const },
+        { id: 4, name: '4号骑行台', bikeModelId: 'neo', status: 'available' as const },
+      ];
+    }
+    
+    return config.stations.map(s => ({
+      id: s.stationId,
+      name: s.name || `${s.stationId}号骑行台`,
+      bikeModelId: s.bikeModelId,
+      status: s.status,
+    }));
+  }, [config?.stations]);
 };
 
 // 主预约 Hook
