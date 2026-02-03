@@ -48,7 +48,7 @@ export function PhoneLogin({ isOpen, onClose, onSuccess }: PhoneLoginProps) {
         setCountdown(60);
         setStep('code');
         // 提示用户
-        alert(`验证码已发送！\n本次验证码为：${getCodeFromConsole()}\n（实际项目中会发送到手机）`);
+        alert(`验证码已发送！\n本次验证码为：查看浏览器控制台\n（实际项目中会发送到手机）`);
       } else {
         setError('发送失败，请重试');
       }
@@ -57,12 +57,6 @@ export function PhoneLogin({ isOpen, onClose, onSuccess }: PhoneLoginProps) {
     } finally {
       setLoading(false);
     }
-  };
-
-  // 从控制台获取验证码（仅用于演示）
-  const getCodeFromConsole = (): string => {
-    // 实际项目中不需要这行，验证码会通过短信发送
-    return '查看浏览器控制台';
   };
 
   // 登录

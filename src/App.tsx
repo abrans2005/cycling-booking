@@ -42,6 +42,30 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
     }
   }, [isLoggedIn, user]);
 
+  // 预约成功后发送通知
+  useEffect(() => {
+    if (showSuccess && lastBooking && config.serverChanKey) {
+      const stationConfig = config.stations?.find(s => s.stationId === lastBooking.stationId);
+      const duration = (() => {
+        const [sh, sm] = lastBooking.startTime.split(':').map(Number);
+        const [eh, em] = lastBooking.endTime.split(':').map(Number);
+        return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+      })();
+      
+      api.sendBookingNotification({
+        memberName: lastBooking.memberName,
+        memberPhone: lastBooking.memberPhone,
+        date: lastBooking.date,
+        startTime: lastBooking.startTime,
+        endTime: lastBooking.endTime,
+        stationId: lastBooking.stationId,
+        bikeModel: stationConfig?.bikeModel,
+        price: duration * config.pricePerHour,
+        notes: lastBooking.notes,
+      });
+    }
+  }, [showSuccess, lastBooking, config]);
+
   const canSubmit = formData.date && formData.startTime && formData.stationId && formData.memberName.trim() && formData.memberPhone.trim();
 
   const handleSelectDate = (date: Date) => {
@@ -221,6 +245,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [newPrice, setNewPrice] = useState('');
   const [showStationModal, setShowStationModal] = useState(false);
   const [editingStations, setEditingStations] = useState(config.stations);
+  const [showServerChanModal, setShowServerChanModal] = useState(false);
+  const [serverChanKey, setServerChanKey] = useState(config.serverChanKey || '');
 
   // 加载所有数据
   const loadAllBookings = async () => {
@@ -341,6 +367,18 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       setConfig(updated);
       setShowStationModal(false);
       showMessage('success', '单车型号已更新');
+    } catch {
+      showMessage('error', '保存失败');
+    }
+  };
+
+  // 保存 Server酱 Key
+  const handleSaveServerChanKey = async () => {
+    try {
+      const updated = await api.updateConfig({ serverChanKey: serverChanKey.trim() || undefined });
+      setConfig(updated);
+      setShowServerChanModal(false);
+      showMessage('success', 'Server酱配置已更新');
     } catch {
       showMessage('error', '保存失败');
     }
@@ -594,13 +632,16 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </div>
 
       {/* 刷新和价格设置按钮 */}
-      <div className="mx-4 mt-3 flex justify-between gap-2">
-        <div className="flex gap-2">
+      <div className="mx-4 mt-3 flex flex-wrap justify-between gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => { setNewPrice(config.pricePerHour.toString()); setShowPriceModal(true); }} className="text-orange-600 border-orange-200 hover:bg-orange-50">
             <span className="mr-1">💰</span>单价: ¥{config.pricePerHour}/小时
           </Button>
           <Button variant="outline" size="sm" onClick={handleOpenStationModal} className="text-blue-600 border-blue-200 hover:bg-blue-50">
             <span className="mr-1">🚲</span>单车设置
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => { setServerChanKey(config.serverChanKey || ''); setShowServerChanModal(true); }} className={cn("border-purple-200 hover:bg-purple-50", config.serverChanKey ? "text-purple-600" : "text-gray-400")}>
+            <span className="mr-1">📢</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
           </Button>
         </div>
         <Button variant="outline" size="sm" onClick={loadAllBookings} disabled={loading} className="text-gray-600">
@@ -736,6 +777,51 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 <Button 
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white" 
                   onClick={handleSaveStationModels}
+                >
+                  保存
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Server酱配置弹窗 */}
+      {showServerChanModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 animate-zoom-in">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">配置 Server酱</h3>
+            <p className="text-sm text-gray-500 mb-4">预约消息将推送到教练微信</p>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-gray-600 mb-1.5 block">SendKey</label>
+                <Input
+                  type="text"
+                  placeholder="SCTxxxxx..."
+                  value={serverChanKey}
+                  onChange={(e) => setServerChanKey(e.target.value)}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  从 <a href="https://sct.ftqq.com/" target="_blank" rel="noopener" className="text-purple-500 hover:underline">sct.ftqq.com</a> 获取
+                </p>
+              </div>
+              <div className="bg-yellow-50 p-3 rounded-lg">
+                <p className="text-xs text-yellow-700">
+                  <strong>配置步骤：</strong><br/>
+                  1. 访问 sct.ftqq.com 登录<br/>
+                  2. 点击「Channel」→「添加通道」<br/>
+                  3. 选择「企业微信应用」或「Server酱」<br/>
+                  4. 复制 SendKey 粘贴到上方
+                </p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => setShowServerChanModal(false)}>
+                  取消
+                </Button>
+                <Button 
+                  className="flex-1 bg-purple-500 hover:bg-purple-600 text-white" 
+                  onClick={handleSaveServerChanKey}
                 >
                   保存
                 </Button>

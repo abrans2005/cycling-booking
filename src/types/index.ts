@@ -39,6 +39,12 @@ export interface BookingFormData {
 // 单车型号
 export type BikeModel = 'Stages bike' | 'Neo bike';
 
+// 骑行台配置
+export interface StationConfig {
+  stationId: number;
+  bikeModel: BikeModel;
+}
+
 // 用户信息
 export interface User {
   id: string;
@@ -49,15 +55,10 @@ export interface User {
   lastLoginAt: string;
 }
 
-// 骑行台配置
-export interface StationConfig {
-  stationId: number;
-  bikeModel: BikeModel;
-}
-
 // 系统配置
 export interface AppConfig {
   pricePerHour: number;
   stations: StationConfig[];
+  serverChanKey?: string;  // Server酱 SendKey
   updatedAt: string;
 }

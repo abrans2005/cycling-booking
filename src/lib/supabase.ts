@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Booking, AppConfig, User } from '@/types';
+import { sendBookingNotification, sendCancelNotification } from './serverchan';
 
 // Supabase 配置
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -16,7 +17,7 @@ export const supabase = useSupabase
 // 本地存储备份
 const STORAGE_KEY = 'cycling_bookings';
 const CONFIG_KEY = 'cycling_config';
-const USER_KEY = 'cycling_user';
+const USER_KEY = 'cycling_users';
 const SMS_CODE_KEY = 'cycling_sms_codes';
 
 // 默认配置
@@ -233,6 +234,26 @@ const localApi = {
     
     return user;
   },
+
+  // 本地模式下发送预约通知（仅控制台输出）
+  sendBookingNotification: async (booking: any): Promise<boolean> => {
+    const config = await localApi.getConfig();
+    if (!config.serverChanKey) {
+      console.log('【Server酱未配置】新预约：', booking);
+      return false;
+    }
+    return sendBookingNotification(config.serverChanKey, booking);
+  },
+
+  // 本地模式下发送取消通知
+  sendCancelNotification: async (booking: any): Promise<boolean> => {
+    const config = await localApi.getConfig();
+    if (!config.serverChanKey) {
+      console.log('【Server酱未配置】取消预约：', booking);
+      return false;
+    }
+    return sendCancelNotification(config.serverChanKey, booking);
+  },
 };
 
 const supabaseApi = {
@@ -390,6 +411,9 @@ const supabaseApi = {
     if (config.stations !== undefined) {
       updateData.stations = config.stations;
     }
+    if (config.serverChanKey !== undefined) {
+      updateData.server_chan_key = config.serverChanKey;
+    }
     
     const { data, error } = await supabase
       .from('config')
@@ -402,6 +426,7 @@ const supabaseApi = {
     return {
       pricePerHour: data.price_per_hour,
       stations: data.stations || DEFAULT_CONFIG.stations,
+      serverChanKey: data.server_chan_key,
       updatedAt: data.updated_at,
     };
   },
@@ -496,6 +521,27 @@ const supabaseApi = {
       createdAt: user.created_at,
       lastLoginAt: user.last_login_at,
     };
+  },
+
+  // 发送预约通知
+  sendBookingNotification: async (booking: any): Promise<boolean> => {
+    // 从配置中获取 Server酱 key
+    const config = await supabaseApi.getConfig();
+    if (!config.serverChanKey) {
+      console.log('Server酱未配置，跳过通知');
+      return false;
+    }
+    return sendBookingNotification(config.serverChanKey, booking);
+  },
+
+  // 发送取消通知
+  sendCancelNotification: async (booking: any): Promise<boolean> => {
+    const config = await supabaseApi.getConfig();
+    if (!config.serverChanKey) {
+      console.log('Server酱未配置，跳过通知');
+      return false;
+    }
+    return sendCancelNotification(config.serverChanKey, booking);
   },
 };
 
