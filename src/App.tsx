@@ -10,11 +10,12 @@ import { MyBookings } from '@/sections/MyBookings';
 import { useBooking, useConfig } from '@/hooks/useBookingRealtime';
 import { useUser } from '@/hooks/useUser';
 import { PhoneLogin } from '@/sections/PhoneLogin';
+import { StationManager } from '@/sections/StationManager';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2 } from 'lucide-react';
 import { api } from '@/lib/supabase';
-import type { Booking, AppConfig, BikeModel } from '@/types';
+import type { Booking, AppConfig, BikeModel, StationConfig } from '@/types';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,7 +60,7 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
         startTime: lastBooking.startTime,
         endTime: lastBooking.endTime,
         stationId: lastBooking.stationId,
-        bikeModel: stationConfig?.bikeModel,
+        bikeModelId: stationConfig?.bikeModelId,
         price: duration * config.pricePerHour,
         notes: lastBooking.notes,
       });
@@ -226,11 +227,15 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [allBookings, setAllBookings] = useState<Booking[]>([]);
   const [config, setConfig] = useState<AppConfig>({
     pricePerHour: 100,
+    bikeModels: [
+      { id: 'stages', name: 'Stages Bike', description: '专业功率训练骑行台' },
+      { id: 'neo', name: 'Neo Bike', description: '智能模拟骑行台' },
+    ],
     stations: [
-      { stationId: 1, bikeModel: 'Stages bike' },
-      { stationId: 2, bikeModel: 'Stages bike' },
-      { stationId: 3, bikeModel: 'Neo bike' },
-      { stationId: 4, bikeModel: 'Neo bike' },
+      { stationId: 1, bikeModelId: 'stages', status: 'available', name: '1号骑行台' },
+      { stationId: 2, bikeModelId: 'stages', status: 'available', name: '2号骑行台' },
+      { stationId: 3, bikeModelId: 'neo', status: 'available', name: '3号骑行台' },
+      { stationId: 4, bikeModelId: 'neo', status: 'available', name: '4号骑行台' },
     ],
     updatedAt: new Date().toISOString(),
   });
@@ -243,10 +248,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [statsView, setStatsView] = useState<StatsViewType>('day');
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [newPrice, setNewPrice] = useState('');
-  const [showStationModal, setShowStationModal] = useState(false);
-  const [editingStations, setEditingStations] = useState(config.stations);
+
   const [showServerChanModal, setShowServerChanModal] = useState(false);
   const [serverChanKey, setServerChanKey] = useState(config.serverChanKey || '');
+  const [showStationManager, setShowStationManager] = useState(false);
 
   // 加载所有数据
   const loadAllBookings = async () => {
@@ -345,30 +350,16 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     }
   };
 
-  // 打开单车型号设置弹窗
-  const handleOpenStationModal = () => {
-    setEditingStations(config.stations);
-    setShowStationModal(true);
-  };
-
-  // 更新某个骑行台的型号
-  const handleStationModelChange = (stationId: number, bikeModel: BikeModel) => {
-    setEditingStations(prev =>
-      prev.map(s =>
-        s.stationId === stationId ? { ...s, bikeModel } : s
-      )
-    );
-  };
-
-  // 保存单车型号设置
-  const handleSaveStationModels = async () => {
+  // 保存骑行台和型号配置
+  const handleSaveStationConfig = async (stations: StationConfig[], bikeModels: BikeModel[]) => {
     try {
-      const updated = await api.updateConfig({ stations: editingStations });
+      const updated = await api.updateConfig({ stations, bikeModels });
       setConfig(updated);
-      setShowStationModal(false);
-      showMessage('success', '单车型号已更新');
+      setShowStationManager(false);
+      showMessage('success', '骑行台配置已更新');
     } catch {
       showMessage('error', '保存失败');
+      throw new Error('保存失败');
     }
   };
 
@@ -432,16 +423,21 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       totalCount: filteredBookings.length,
       revenue: calculateRevenue(filteredBookings, config.pricePerHour),
       totalHours: confirmed.reduce((sum, b) => sum + calculateDuration(b.startTime, b.endTime), 0),
-      // 骑行台统计
-      stationStats: [1, 2, 3, 4].map(stationId => {
-        const stationBookings = filteredBookings.filter(b => b.stationId === stationId && b.status === 'confirmed');
-        return {
-          stationId,
-          count: stationBookings.length,
-          hours: stationBookings.reduce((sum, b) => sum + calculateDuration(b.startTime, b.endTime), 0),
-          revenue: calculateRevenue(stationBookings, config.pricePerHour),
-        };
-      }),
+      // 骑行台统计（只统计启用的骑行台）
+      stationStats: config.stations
+        .filter(s => s.status !== 'disabled')
+        .map(station => {
+          const stationBookings = filteredBookings.filter(b => b.stationId === station.stationId && b.status === 'confirmed');
+          return {
+            stationId: station.stationId,
+            stationName: station.name,
+            bikeModel: config.bikeModels.find(m => m.id === station.bikeModelId)?.name || '未知型号',
+            status: station.status,
+            count: stationBookings.length,
+            hours: stationBookings.reduce((sum, b) => sum + calculateDuration(b.startTime, b.endTime), 0),
+            revenue: calculateRevenue(stationBookings, config.pricePerHour),
+          };
+        }),
     };
   }, [allBookings, statsView, currentDate, currentMonth, currentYear, searchPhone, config.pricePerHour]);
 
@@ -605,17 +601,20 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             {stats.stationStats.map((stat) => (
               <div key={stat.stationId} className="px-4 py-3 border-b last:border-b-0 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-                    {stat.stationId}号
+                  <div className={cn(
+                    'w-10 h-10 rounded-full flex items-center justify-center font-bold',
+                    stat.status === 'maintenance' ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
+                  )}>
+                    {stat.status === 'maintenance' ? '!' : `${stat.stationId}`}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-800">{stat.stationId}号骑行台</p>
-                    <p className="text-xs text-gray-500">{stat.count} 次预约 · {stat.hours.toFixed(1)} 小时</p>
+                    <p className="font-medium text-gray-800">{stat.stationName}</p>
+                    <p className="text-xs text-gray-500">{stat.bikeModel} · {stat.count} 次预约</p>
                   </div>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-green-600">¥{stat.revenue}</p>
-                  <p className="text-xs text-gray-400">收入</p>
+                  <p className="text-xs text-gray-400">{stat.hours.toFixed(1)}小时</p>
                 </div>
               </div>
             ))}
@@ -637,8 +636,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           <Button variant="outline" size="sm" onClick={() => { setNewPrice(config.pricePerHour.toString()); setShowPriceModal(true); }} className="text-orange-600 border-orange-200 hover:bg-orange-50">
             <span className="mr-1">💰</span>单价: ¥{config.pricePerHour}/小时
           </Button>
-          <Button variant="outline" size="sm" onClick={handleOpenStationModal} className="text-blue-600 border-blue-200 hover:bg-blue-50">
-            <span className="mr-1">🚲</span>单车设置
+          <Button variant="outline" size="sm" onClick={() => setShowStationManager(true)} className="text-blue-600 border-blue-200 hover:bg-blue-50">
+            <span className="mr-1">🚲</span>骑行台管理
           </Button>
           <Button variant="outline" size="sm" onClick={() => { setServerChanKey(config.serverChanKey || ''); setShowServerChanModal(true); }} className={cn("border-purple-200 hover:bg-purple-50", config.serverChanKey ? "text-purple-600" : "text-gray-400")}>
             <span className="mr-1">📢</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
@@ -751,40 +750,15 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         </div>
       )}
 
-      {/* 单车型号设置弹窗 */}
-      {showStationModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm p-6 animate-zoom-in">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">设置单车型号</h3>
-            <div className="space-y-3">
-              {editingStations.map((station) => (
-                <div key={station.stationId} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
-                  <span className="font-medium text-gray-700">{station.stationId}号骑行台</span>
-                  <select
-                    value={station.bikeModel}
-                    onChange={(e) => handleStationModelChange(station.stationId, e.target.value as BikeModel)}
-                    className="px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Stages bike">Stages bike</option>
-                    <option value="Neo bike">Neo bike</option>
-                  </select>
-                </div>
-              ))}
-              <div className="flex gap-3 pt-4">
-                <Button variant="outline" className="flex-1" onClick={() => setShowStationModal(false)}>
-                  取消
-                </Button>
-                <Button 
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white" 
-                  onClick={handleSaveStationModels}
-                >
-                  保存
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 骑行台管理弹窗 */}
+      <StationManager
+        isOpen={showStationManager}
+        onClose={() => setShowStationManager(false)}
+        stations={config.stations}
+        bikeModels={config.bikeModels}
+        allBookings={allBookings}
+        onSave={handleSaveStationConfig}
+      />
 
       {/* Server酱配置弹窗 */}
       {showServerChanModal && (

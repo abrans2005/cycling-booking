@@ -31,21 +31,25 @@ export const useTimeSlots = () => {
 // 骑行台数据
 export const useBikeStations = () => {
   return [
-    { id: 1, name: '1号骑行台', status: 'available' as const },
-    { id: 2, name: '2号骑行台', status: 'available' as const },
-    { id: 3, name: '3号骑行台', status: 'available' as const },
-    { id: 4, name: '4号骑行台', status: 'available' as const },
+    { id: 1, name: '1号骑行台', bikeModelId: 'stages', status: 'available' as const },
+    { id: 2, name: '2号骑行台', bikeModelId: 'stages', status: 'available' as const },
+    { id: 3, name: '3号骑行台', bikeModelId: 'neo', status: 'available' as const },
+    { id: 4, name: '4号骑行台', bikeModelId: 'neo', status: 'available' as const },
   ];
 };
 
 // 默认配置
 const DEFAULT_APP_CONFIG: AppConfig = {
   pricePerHour: 100,
+  bikeModels: [
+    { id: 'stages', name: 'Stages Bike', description: '专业功率训练骑行台' },
+    { id: 'neo', name: 'Neo Bike', description: '智能模拟骑行台' },
+  ],
   stations: [
-    { stationId: 1, bikeModel: 'Stages bike' },
-    { stationId: 2, bikeModel: 'Stages bike' },
-    { stationId: 3, bikeModel: 'Neo bike' },
-    { stationId: 4, bikeModel: 'Neo bike' },
+    { stationId: 1, bikeModelId: 'stages', status: 'available', name: '1号骑行台' },
+    { stationId: 2, bikeModelId: 'stages', status: 'available', name: '2号骑行台' },
+    { stationId: 3, bikeModelId: 'neo', status: 'available', name: '3号骑行台' },
+    { stationId: 4, bikeModelId: 'neo', status: 'available', name: '4号骑行台' },
   ],
   updatedAt: new Date().toISOString(),
 };

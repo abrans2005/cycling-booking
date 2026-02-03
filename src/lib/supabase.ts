@@ -23,11 +23,15 @@ const SMS_CODE_KEY = 'cycling_sms_codes';
 // 默认配置
 const DEFAULT_CONFIG: AppConfig = {
   pricePerHour: 100,
+  bikeModels: [
+    { id: 'stages', name: 'Stages Bike', description: '专业功率训练骑行台' },
+    { id: 'neo', name: 'Neo Bike', description: '智能模拟骑行台' },
+  ],
   stations: [
-    { stationId: 1, bikeModel: 'Stages bike' },
-    { stationId: 2, bikeModel: 'Stages bike' },
-    { stationId: 3, bikeModel: 'Neo bike' },
-    { stationId: 4, bikeModel: 'Neo bike' },
+    { stationId: 1, bikeModelId: 'stages', status: 'available', name: '1号骑行台' },
+    { stationId: 2, bikeModelId: 'stages', status: 'available', name: '2号骑行台' },
+    { stationId: 3, bikeModelId: 'neo', status: 'available', name: '3号骑行台' },
+    { stationId: 4, bikeModelId: 'neo', status: 'available', name: '4号骑行台' },
   ],
   updatedAt: new Date().toISOString(),
 };
@@ -393,6 +397,7 @@ const supabaseApi = {
     return {
       pricePerHour: data.price_per_hour,
       stations: data.stations || DEFAULT_CONFIG.stations,
+      bikeModels: data.bike_models,
       updatedAt: data.updated_at,
     };
   },
@@ -414,6 +419,9 @@ const supabaseApi = {
     if (config.serverChanKey !== undefined) {
       updateData.server_chan_key = config.serverChanKey;
     }
+    if (config.bikeModels !== undefined) {
+      updateData.bike_models = config.bikeModels;
+    }
     
     const { data, error } = await supabase
       .from('config')
@@ -427,6 +435,7 @@ const supabaseApi = {
       pricePerHour: data.price_per_hour,
       stations: data.stations || DEFAULT_CONFIG.stations,
       serverChanKey: data.server_chan_key,
+      bikeModels: data.bike_models,
       updatedAt: data.updated_at,
     };
   },

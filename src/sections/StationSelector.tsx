@@ -1,8 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { Bike, CheckCircle2, XCircle } from 'lucide-react';
+import { Bike, CheckCircle2, XCircle, Wrench } from 'lucide-react';
 import { useBikeStations, useConfig } from '@/hooks/useBookingRealtime';
 import { api } from '@/lib/supabase';
+
+interface StationConfig {
+  stationId: number;
+  bikeModelId: string;
+  status: 'available' | 'maintenance' | 'disabled';
+  name?: string;
+}
+
+interface BikeModel {
+  id: string;
+  name: string;
+}
 
 interface StationSelectorProps {
   selectedStation: number | null;
@@ -21,19 +33,41 @@ export function StationSelector({
 }: StationSelectorProps) {
   const stations = useBikeStations();
   const { config } = useConfig();
-  const [availableStationIds, setAvailableStationIds] = useState<number[]>([1, 2, 3, 4]);
+  const [timeAvailableStationIds, setTimeAvailableStationIds] = useState<number[]>([1, 2, 3, 4]);
   const [loading, setLoading] = useState(false);
 
-  // 获取骑行台型号
+  // 获取所有可用的骑行台（status === 'available'）
+  const availableStations = useMemo(() => {
+    const stationConfigs: StationConfig[] = config?.stations || [];
+    return stations.filter(station => {
+      const stationConfig = stationConfigs.find((s: StationConfig) => s.stationId === station.id);
+      return stationConfig?.status === 'available';
+    });
+  }, [stations, config?.stations]);
+
+  // 获取骑行台型号名称
   const getStationModel = (stationId: number) => {
-    const stationConfig = config.stations?.find(s => s.stationId === stationId);
-    return stationConfig?.bikeModel || 'Stages bike';
+    const stationConfigs: StationConfig[] = config?.stations || [];
+    const bikeModels: BikeModel[] = config?.bikeModels || [];
+    const stationConfig = stationConfigs.find((s: StationConfig) => s.stationId === stationId);
+    if (stationConfig?.bikeModelId) {
+      const model = bikeModels.find((m: BikeModel) => m.id === stationConfig.bikeModelId);
+      return model?.name || 'Stages bike';
+    }
+    return 'Stages bike';
+  };
+
+  // 获取骑行台状态
+  const getStationStatus = (stationId: number): 'available' | 'maintenance' | 'disabled' => {
+    const stationConfigs: StationConfig[] = config?.stations || [];
+    const stationConfig = stationConfigs.find((s: StationConfig) => s.stationId === stationId);
+    return stationConfig?.status || 'available';
   };
 
   useEffect(() => {
     const checkAvailability = async () => {
       if (!selectedDate || !selectedTime) {
-        setAvailableStationIds([1, 2, 3, 4]);
+        setTimeAvailableStationIds(availableStations.map(s => s.id));
         return;
       }
 
@@ -46,30 +80,30 @@ export function StationSelector({
         const endTime = `${endHour.toString().padStart(2, '0')}:${Math.round(endMinute).toString().padStart(2, '0')}`;
 
         const available: number[] = [];
-        for (let stationId = 1; stationId <= 4; stationId++) {
+        for (const station of availableStations) {
           try {
-            const isAvailable = await api.checkStationAvailability(stationId, dateStr, selectedTime, endTime);
+            const isAvailable = await api.checkStationAvailability(station.id, dateStr, selectedTime, endTime);
             if (isAvailable) {
-              available.push(stationId);
+              available.push(station.id);
             }
           } catch {
             // 如果检查失败，默认设为可用
-            available.push(stationId);
+            available.push(station.id);
           }
         }
-        setAvailableStationIds(available);
+        setTimeAvailableStationIds(available);
       } catch {
-        setAvailableStationIds([1, 2, 3, 4]);
+        setTimeAvailableStationIds(availableStations.map(s => s.id));
       } finally {
         setLoading(false);
       }
     };
 
     checkAvailability();
-  }, [selectedDate, selectedTime, duration]);
+  }, [selectedDate, selectedTime, duration, availableStations]);
 
-  const isStationAvailable = (stationId: number) => {
-    return availableStationIds.includes(stationId);
+  const isTimeAvailable = (stationId: number) => {
+    return timeAvailableStationIds.includes(stationId);
   };
 
   return (
@@ -78,7 +112,7 @@ export function StationSelector({
         <Bike className="w-4 h-4 text-gray-500" />
         <h2 className="text-sm font-medium text-gray-700">选择骑行台</h2>
         <span className="text-xs text-gray-400 ml-auto">
-          共4台，可选{availableStationIds.length}台
+          共{stations.length}台，可选{timeAvailableStationIds.length}台
         </span>
       </div>
       
@@ -92,21 +126,22 @@ export function StationSelector({
         </div>
       ) : (
         <div className="px-4 grid grid-cols-2 gap-3">
-          {stations.map((station) => {
-            const available = isStationAvailable(station.id);
+          {availableStations.map((station) => {
+            const timeAvailable = isTimeAvailable(station.id);
             const isSelected = selectedStation === station.id;
             const bikeModel = getStationModel(station.id);
+            const stationStatus = getStationStatus(station.id);
             
             return (
               <button
                 key={station.id}
-                onClick={() => available && onSelectStation(station.id)}
-                disabled={!available}
+                onClick={() => timeAvailable && onSelectStation(station.id)}
+                disabled={!timeAvailable}
                 className={cn(
                   'relative py-4 px-3 rounded-xl border-2 transition-all',
                   isSelected
                     ? 'border-orange-500 bg-orange-50'
-                    : available
+                    : timeAvailable
                     ? 'border-gray-200 bg-white hover:border-orange-300'
                     : 'border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed'
                 )}
@@ -116,7 +151,7 @@ export function StationSelector({
                     'w-10 h-10 rounded-full flex items-center justify-center',
                     isSelected
                       ? 'bg-orange-500 text-white'
-                      : available
+                      : timeAvailable
                       ? 'bg-orange-100 text-orange-600'
                       : 'bg-gray-200 text-gray-400'
                   )}>
@@ -125,15 +160,20 @@ export function StationSelector({
                   <div className="text-left flex-1 min-w-0">
                     <div className={cn(
                       'font-medium truncate',
-                      isSelected ? 'text-orange-600' : available ? 'text-gray-800' : 'text-gray-400'
+                      isSelected ? 'text-orange-600' : timeAvailable ? 'text-gray-800' : 'text-gray-400'
                     )}>
                       {station.name}
                     </div>
                     <div className="flex items-center gap-1 mt-0.5">
-                      {available ? (
+                      {timeAvailable ? (
                         <>
                           <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
                           <span className="text-xs text-green-600 truncate">{bikeModel}</span>
+                        </>
+                      ) : stationStatus === 'maintenance' ? (
+                        <>
+                          <Wrench className="w-3 h-3 text-orange-400 flex-shrink-0" />
+                          <span className="text-xs text-orange-500 truncate">维护中</span>
                         </>
                       ) : (
                         <>
