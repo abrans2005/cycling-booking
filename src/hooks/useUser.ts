@@ -1,59 +1,61 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { WechatUserInfo } from '@/lib/wechat';
-import {
-  getStoredUserInfo,
-  saveUserInfo,
-  clearUserInfo,
-  isWechatBrowser,
-  mockWechatLogin,
-  getWechatUserProfile,
-} from '@/lib/wechat';
+import type { User } from '@/types';
+import { api } from '@/lib/supabase';
+
+const USER_STORAGE_KEY = 'cycling_current_user';
 
 export interface UseUserReturn {
-  userInfo: WechatUserInfo | null;
+  user: User | null;
   isLoggedIn: boolean;
-  isWechat: boolean;
   loading: boolean;
-  login: () => Promise<void>;
-  loginWithWechat: () => Promise<void>;
+  showLoginModal: boolean;
+  setShowLoginModal: (show: boolean) => void;
+  login: (phone: string, nickname?: string) => Promise<void>;
   logout: () => void;
-  updateUserInfo: (updates: Partial<WechatUserInfo>) => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 export const useUser = (): UseUserReturn => {
-  const [userInfo, setUserInfo] = useState<WechatUserInfo | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   // 初始化时从本地存储加载
   useEffect(() => {
-    const stored = getStoredUserInfo();
-    setUserInfo(stored);
-    setLoading(false);
-  }, []);
-
-  // 模拟登录（生成随机用户信息）
-  const login = useCallback(async () => {
-    setLoading(true);
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+    
     try {
-      const userInfo = mockWechatLogin();
-      setUserInfo(userInfo);
+      const stored = localStorage.getItem(USER_STORAGE_KEY);
+      if (stored) {
+        setUser(JSON.parse(stored));
+      }
+    } catch {
+      console.error('加载用户信息失败');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 微信登录（尝试获取真实微信用户信息）
-  const loginWithWechat = useCallback(async () => {
+  // 登录
+  const login = useCallback(async (phone: string, nickname?: string) => {
     setLoading(true);
     try {
-      // 尝试获取真实微信用户信息
-      const wxUser = await getWechatUserProfile();
-      if (wxUser) {
-        setUserInfo(wxUser);
-      } else {
-        // 如果获取失败，使用模拟登录
-        const userInfo = mockWechatLogin();
-        setUserInfo(userInfo);
+      // 获取或创建用户
+      const userData = await api.getOrCreateUser(phone);
+      
+      // 如果有提供昵称，更新它
+      if (nickname) {
+        userData.nickname = nickname;
+      }
+      
+      setUser(userData);
+      
+      // 保存到本地存储
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userData));
       }
     } finally {
       setLoading(false);
@@ -62,28 +64,32 @@ export const useUser = (): UseUserReturn => {
 
   // 退出登录
   const logout = useCallback(() => {
-    clearUserInfo();
-    setUserInfo(null);
+    setUser(null);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(USER_STORAGE_KEY);
+    }
   }, []);
 
   // 更新用户信息
-  const updateUserInfo = useCallback((updates: Partial<WechatUserInfo>) => {
-    setUserInfo((prev) => {
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
-      saveUserInfo(updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updated));
+      }
       return updated;
     });
   }, []);
 
   return {
-    userInfo,
-    isLoggedIn: !!userInfo,
-    isWechat: isWechatBrowser(),
+    user,
+    isLoggedIn: !!user,
     loading,
+    showLoginModal,
+    setShowLoginModal,
     login,
-    loginWithWechat,
     logout,
-    updateUserInfo,
+    updateUser,
   };
 };

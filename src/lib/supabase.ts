@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Booking, AppConfig } from '@/types';
+import type { Booking, AppConfig, User } from '@/types';
 
 // Supabase 配置
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -16,6 +16,8 @@ export const supabase = useSupabase
 // 本地存储备份
 const STORAGE_KEY = 'cycling_bookings';
 const CONFIG_KEY = 'cycling_config';
+const USER_KEY = 'cycling_user';
+const SMS_CODE_KEY = 'cycling_sms_codes';
 
 // 默认配置
 const DEFAULT_CONFIG: AppConfig = {
@@ -151,6 +153,85 @@ const localApi = {
       storage.setItem(CONFIG_KEY, JSON.stringify(updated));
     }
     return updated;
+  },
+
+  // 发送验证码（模拟）
+  sendSmsCode: async (phone: string): Promise<boolean> => {
+    const storage = getStorage();
+    if (!storage) return false;
+    
+    // 生成6位随机验证码
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // 存储验证码（5分钟有效）
+    const codes = JSON.parse(storage.getItem(SMS_CODE_KEY) || '{}');
+    codes[phone] = {
+      code,
+      expireAt: Date.now() + 5 * 60 * 1000, // 5分钟过期
+    };
+    storage.setItem(SMS_CODE_KEY, JSON.stringify(codes));
+    
+    // 模拟发送短信 - 在控制台输出
+    console.log(`【骑行工作室】验证码：${code}，5分钟内有效。`);
+    
+    return true;
+  },
+
+  // 验证验证码
+  verifySmsCode: async (phone: string, code: string): Promise<boolean> => {
+    const storage = getStorage();
+    if (!storage) return false;
+    
+    const codes = JSON.parse(storage.getItem(SMS_CODE_KEY) || '{}');
+    const record = codes[phone];
+    
+    if (!record) return false;
+    if (Date.now() > record.expireAt) return false;
+    if (record.code !== code) return false;
+    
+    // 验证成功后删除验证码
+    delete codes[phone];
+    storage.setItem(SMS_CODE_KEY, JSON.stringify(codes));
+    
+    return true;
+  },
+
+  // 获取或创建用户
+  getOrCreateUser: async (phone: string): Promise<User> => {
+    const storage = getStorage();
+    if (!storage) {
+      // 返回临时用户
+      return {
+        id: 'temp-' + Date.now(),
+        phone,
+        nickname: '用户' + phone.slice(-4),
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      };
+    }
+    
+    // 从本地存储获取用户列表
+    const users = JSON.parse(storage.getItem(USER_KEY) || '[]');
+    let user = users.find((u: User) => u.phone === phone);
+    
+    if (!user) {
+      // 创建新用户
+      user = {
+        id: 'user-' + Date.now(),
+        phone,
+        nickname: '用户' + phone.slice(-4),
+        createdAt: new Date().toISOString(),
+        lastLoginAt: new Date().toISOString(),
+      };
+      users.push(user);
+      storage.setItem(USER_KEY, JSON.stringify(users));
+    } else {
+      // 更新最后登录时间
+      user.lastLoginAt = new Date().toISOString();
+      storage.setItem(USER_KEY, JSON.stringify(users));
+    }
+    
+    return user;
   },
 };
 
@@ -322,6 +403,98 @@ const supabaseApi = {
       pricePerHour: data.price_per_hour,
       stations: data.stations || DEFAULT_CONFIG.stations,
       updatedAt: data.updated_at,
+    };
+  },
+
+  // 发送验证码（模拟，真实环境需要对接短信服务商）
+  sendSmsCode: async (phone: string): Promise<boolean> => {
+    if (!supabase) return false;
+    
+    // 生成6位随机验证码
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // 存储到 Supabase
+    const { error } = await supabase
+      .from('sms_codes')
+      .upsert({
+        phone,
+        code,
+        expire_at: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+        created_at: new Date().toISOString(),
+      });
+    
+    if (error) {
+      console.error('存储验证码失败:', error);
+      return false;
+    }
+    
+    // 模拟发送短信 - 在控制台输出
+    console.log(`【骑行工作室】验证码：${code}，5分钟内有效。`);
+    
+    return true;
+  },
+
+  // 验证验证码
+  verifySmsCode: async (phone: string, code: string): Promise<boolean> => {
+    if (!supabase) return false;
+    
+    const { data, error } = await supabase
+      .from('sms_codes')
+      .select('*')
+      .eq('phone', phone)
+      .eq('code', code)
+      .gt('expire_at', new Date().toISOString())
+      .single();
+    
+    if (error || !data) return false;
+    
+    // 删除已使用的验证码
+    await supabase.from('sms_codes').delete().eq('phone', phone);
+    
+    return true;
+  },
+
+  // 获取或创建用户
+  getOrCreateUser: async (phone: string): Promise<User> => {
+    if (!supabase) throw new Error('Supabase not initialized');
+    
+    // 先查找用户
+    let { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('phone', phone)
+      .single();
+    
+    if (error || !user) {
+      // 创建新用户
+      const { data: newUser, error: createError } = await supabase
+        .from('users')
+        .insert([{
+          phone,
+          nickname: '用户' + phone.slice(-4),
+          created_at: new Date().toISOString(),
+          last_login_at: new Date().toISOString(),
+        }])
+        .select()
+        .single();
+      
+      if (createError) throw createError;
+      user = newUser;
+    } else {
+      // 更新最后登录时间
+      await supabase
+        .from('users')
+        .update({ last_login_at: new Date().toISOString() })
+        .eq('id', user.id);
+    }
+    
+    return {
+      id: user.id,
+      phone: user.phone,
+      nickname: user.nickname,
+      avatarUrl: user.avatar_url,
+      createdAt: user.created_at,
+      lastLoginAt: user.last_login_at,
     };
   },
 };
