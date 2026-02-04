@@ -1,5 +1,5 @@
 // 版本信息 - 每次重大更新时修改
-export const APP_VERSION = '2.0.0-cloud';
+export const APP_VERSION = '2.0.1-cloud';
 export const APP_BUILD_TIME = new Date().toISOString();
 
 // 检测是否为云端模式

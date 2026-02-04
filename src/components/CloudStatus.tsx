@@ -9,6 +9,8 @@ export function CloudStatus() {
   const [bookingCount, setBookingCount] = useState<number | null>(null);
   const [, setLastUpdate] = useState<string>('');
 
+  console.log('[CloudStatus] Component rendered');
+
   const checkConnection = async () => {
     setStatus('checking');
     try {
