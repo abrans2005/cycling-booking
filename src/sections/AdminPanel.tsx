@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api, useSupabase } from '@/lib/supabase';
-import type { Booking } from '@/types';
+import type { Booking, BookingNotification } from '@/types';
+import { useNotifications } from '@/hooks/useNotifications';
 import { 
   Calendar, 
   Clock, 
@@ -15,7 +16,11 @@ import {
   ChevronLeft,
   ChevronRight,
   AlertCircle,
-  Search
+  Search,
+  Bell,
+  Check,
+  Trash,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,6 +36,21 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [searchPhone, setSearchPhone] = useState('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  
+  // 消息通知
+  const {
+    notifications,
+    unreadCount,
+    isOpen,
+    toggleOpen,
+    closePanel,
+    markAsRead,
+    markAllAsRead,
+    removeNotification,
+    clearAll,
+  } = useNotifications();
+  
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   // 加载预约数据
   const loadBookings = async () => {
@@ -113,6 +133,17 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
     searchPhone === '' || b.memberPhone.includes(searchPhone)
   );
 
+  // 点击外部关闭通知面板
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        closePanel();
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [closePanel]);
+
   // 统计
   const stats = {
     total: filteredBookings.length,
@@ -137,15 +168,95 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
               <p className="text-xs text-white/80">骑行工作室预约管理</p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onLogout}
-            className="text-white hover:bg-white/20"
-          >
-            <LogOut className="w-4 h-4 mr-1" />
-            退出
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* 消息通知按钮 */}
+            <div className="relative" ref={notificationRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleOpen}
+                className="text-white hover:bg-white/20 relative"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+              
+              {/* 消息下拉面板 */}
+              {isOpen && (
+                <div className="absolute top-full right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border z-50 max-h-[400px] flex flex-col">
+                  {/* 面板头部 */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50 rounded-t-xl">
+                    <div className="flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-orange-500" />
+                      <span className="font-medium text-gray-800">预约通知</span>
+                      {unreadCount > 0 && (
+                        <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {unreadCount > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={markAllAsRead}
+                          className="h-7 text-xs text-gray-600 hover:text-orange-600"
+                        >
+                          <Check className="w-3 h-3 mr-1" />
+                          全部已读
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearAll}
+                        className="h-7 text-xs text-gray-600 hover:text-red-600"
+                      >
+                        <Trash className="w-3 h-3 mr-1" />
+                        清空
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  {/* 消息列表 */}
+                  <div className="flex-1 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="py-8 text-center text-gray-400">
+                        <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                        <p className="text-sm">暂无通知</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y">
+                        {notifications.map((notification) => (
+                          <NotificationItem
+                            key={notification.id}
+                            notification={notification}
+                            onRead={() => markAsRead(notification.id)}
+                            onRemove={() => removeNotification(notification.id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLogout}
+              className="text-white hover:bg-white/20"
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              退出
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -361,6 +472,85 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// 通知项组件
+interface NotificationItemProps {
+  notification: BookingNotification;
+  onRead: () => void;
+  onRemove: () => void;
+}
+
+function NotificationItem({ notification, onRead, onRemove }: NotificationItemProps) {
+  const formatTime = (isoString: string) => {
+    const date = new Date(isoString);
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
+  return (
+    <div
+      className={cn(
+        'p-3 hover:bg-gray-50 transition-colors cursor-pointer relative group',
+        !notification.read && 'bg-orange-50/50'
+      )}
+      onClick={onRead}
+    >
+      {/* 未读指示器 */}
+      {!notification.read && (
+        <div className="absolute left-2 top-4 w-2 h-2 bg-orange-500 rounded-full" />
+      )}
+      
+      <div className={cn('pl-4', !notification.read && 'pl-5')}>
+        {/* 标题和时间 */}
+        <div className="flex items-center justify-between mb-1">
+          <span className={cn(
+            'text-sm font-medium',
+            notification.read ? 'text-gray-600' : 'text-gray-800'
+          )}>
+            {notification.title}
+          </span>
+          <span className="text-xs text-gray-400">
+            {formatTime(notification.createdAt)}
+          </span>
+        </div>
+        
+        {/* 内容 */}
+        <p className="text-xs text-gray-600 mb-1.5">
+          {notification.content}
+        </p>
+        
+        {/* 详细信息 */}
+        <div className="text-xs text-gray-500 space-y-0.5 bg-gray-50 p-2 rounded">
+          <div className="flex items-center gap-1">
+            <User className="w-3 h-3" />
+            <span>{notification.memberName}</span>
+            <span className="text-gray-400">({notification.memberPhone})</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Bike className="w-3 h-3" />
+            <span>{notification.stationId}号骑行台</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            <span>{notification.startTime} - {notification.endTime}</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* 删除按钮 */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove();
+        }}
+        className="absolute top-2 right-2 p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded transition-all"
+      >
+        <X className="w-3 h-3 text-gray-400" />
+      </button>
     </div>
   );
 }

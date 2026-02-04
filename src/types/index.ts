@@ -69,3 +69,19 @@ export interface AppConfig {
   serverChanKey?: string;         // Server酱 SendKey
   updatedAt: string;
 }
+
+// 消息通知
+export interface BookingNotification {
+  id: string;
+  bookingId: string;
+  title: string;
+  content: string;
+  memberName: string;
+  memberPhone: string;
+  stationId: number;
+  date: string;
+  startTime: string;
+  endTime: string;
+  read: boolean;
+  createdAt: string;
+}
