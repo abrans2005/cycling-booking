@@ -1,27 +1,31 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Booking, AppConfig, User } from '@/types';
 import { sendBookingNotification, sendCancelNotification } from './serverchan';
+import { APP_VERSION } from './version';
+
+console.log('[System] App Version:', APP_VERSION);
+console.log('[System] Storage Mode: CLOUD ONLY (Supabase)');
 
 // Supabase 配置
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // 调试信息（部署后会显示在浏览器控制台）
-console.log('[Supabase Debug] Environment check:');
-console.log('[Supabase Debug] VITE_SUPABASE_URL exists:', !!import.meta.env.VITE_SUPABASE_URL);
-console.log('[Supabase Debug] VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
-console.log('[Supabase Debug] SUPABASE_URL length:', SUPABASE_URL.length);
-console.log('[Supabase Debug] SUPABASE_ANON_KEY length:', SUPABASE_ANON_KEY.length);
+console.log('[Supabase] Environment check:');
+console.log('[Supabase] URL configured:', SUPABASE_URL ? 'YES' : 'NO');
+console.log('[Supabase] KEY configured:', SUPABASE_ANON_KEY ? 'YES' : 'NO');
 
 // 验证配置
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('[Supabase Debug] Missing config details:');
-  console.error('  - URL missing:', !SUPABASE_URL);
-  console.error('  - KEY missing:', !SUPABASE_ANON_KEY);
+  console.error('[Supabase] ❌ 配置缺失！');
+  console.error('  - URL:', SUPABASE_URL ? 'OK' : 'MISSING');
+  console.error('  - KEY:', SUPABASE_ANON_KEY ? 'OK' : 'MISSING');
   throw new Error(
-    'Supabase 配置缺失！请在 .env 文件或 Vercel 环境变量中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
+    'Supabase 配置缺失！请检查 Vercel 环境变量是否设置了 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
   );
 }
+
+console.log('[Supabase] ✅ 配置正常，使用云端存储');
 
 // 创建 Supabase 客户端
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
