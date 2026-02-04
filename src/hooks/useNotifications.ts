@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Booking, BookingNotification } from '@/types';
 
+// 调试信息
+console.log('[Notifications] Hook loaded');
+
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<BookingNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);

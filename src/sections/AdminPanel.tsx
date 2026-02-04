@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { api, useSupabase } from '@/lib/supabase';
+import { api } from '@/lib/supabase';
 import type { Booking, BookingNotification } from '@/types';
 import { useNotifications } from '@/hooks/useNotifications';
 import { 
@@ -270,18 +270,7 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
         </div>
       )}
 
-      {/* 数据存储模式提示 */}
-      {!useSupabase && (
-        <div className="bg-yellow-50 border border-yellow-200 mx-4 mt-4 p-3 rounded-lg">
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
-            <div className="text-sm text-yellow-800">
-              <p className="font-medium">本地存储模式</p>
-              <p className="text-xs mt-1">数据保存在浏览器本地，更换设备或清除缓存会丢失。建议配置 Supabase 进行云端存储。</p>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* 日期选择 */}
       <div className="bg-white mx-4 mt-4 p-4 rounded-xl shadow-sm">
