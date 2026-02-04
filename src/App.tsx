@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { DebugInfo } from '@/components/DebugInfo';
 import { Header } from '@/sections/Header';
 import { DateSelector } from '@/sections/DateSelector';
 import { TimeSelector } from '@/sections/TimeSelector';
@@ -831,4 +832,14 @@ function App() {
   }
 }
 
-export default App;
+// 包装组件，添加调试信息
+function AppWithDebug() {
+  return (
+    <>
+      <App />
+      <DebugInfo />
+    </>
+  );
+}
+
+export default AppWithDebug;

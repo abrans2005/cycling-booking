@@ -6,10 +6,20 @@ import { sendBookingNotification, sendCancelNotification } from './serverchan';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// 调试信息（部署后会显示在浏览器控制台）
+console.log('[Supabase Debug] Environment check:');
+console.log('[Supabase Debug] VITE_SUPABASE_URL exists:', !!import.meta.env.VITE_SUPABASE_URL);
+console.log('[Supabase Debug] VITE_SUPABASE_ANON_KEY exists:', !!import.meta.env.VITE_SUPABASE_ANON_KEY);
+console.log('[Supabase Debug] SUPABASE_URL length:', SUPABASE_URL.length);
+console.log('[Supabase Debug] SUPABASE_ANON_KEY length:', SUPABASE_ANON_KEY.length);
+
 // 验证配置
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('[Supabase Debug] Missing config details:');
+  console.error('  - URL missing:', !SUPABASE_URL);
+  console.error('  - KEY missing:', !SUPABASE_ANON_KEY);
   throw new Error(
-    'Supabase 配置缺失！请在 .env 文件中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
+    'Supabase 配置缺失！请在 .env 文件或 Vercel 环境变量中设置 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY'
   );
 }
 
