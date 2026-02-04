@@ -8,6 +8,7 @@ export function DebugInfo() {
   });
   const [connectionTest, setConnectionTest] = useState<string>('未测试');
   const [error, setError] = useState<string>('');
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     // 检查环境变量
@@ -15,45 +16,55 @@ export function DebugInfo() {
     const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
     
     setEnvInfo({
-      url: url ? `${url.substring(0, 20)}... (${url.length} chars)` : '❌ 未设置',
-      key: key ? `${key.substring(0, 20)}... (${key.length} chars)` : '❌ 未设置',
+      url: url ? `✅ 已设置 (${url.length} chars)` : '❌ 未设置',
+      key: key ? `✅ 已设置 (${key.length} chars)` : '❌ 未设置',
     });
+    
+    // 自动测试连接
+    testConnection();
   }, []);
 
   const testConnection = async () => {
     setConnectionTest('测试中...');
     setError('');
     try {
-      // 测试获取配置
       const config = await api.getConfig();
-      setConnectionTest('✅ 连接成功');
-      console.log('Config:', config);
+      setConnectionTest('✅ 云端连接正常');
+      console.log('[DebugInfo] Config:', config);
     } catch (err: any) {
       setConnectionTest('❌ 连接失败');
       setError(err.message || String(err));
-      console.error('Connection test failed:', err);
+      console.error('[DebugInfo] Connection test failed:', err);
     }
   };
 
-  // 只在开发环境或管理员模式显示
-  const isDev = import.meta.env.DEV;
-  if (!isDev) return null;
-
   return (
-    <div className="fixed bottom-4 right-4 bg-yellow-50 border border-yellow-300 p-4 rounded-lg shadow-lg z-50 max-w-sm">
-      <h3 className="font-bold text-yellow-800 mb-2">🔧 调试信息</h3>
-      <div className="text-xs space-y-1 text-yellow-700">
-        <p><strong>VITE_SUPABASE_URL:</strong> {envInfo.url}</p>
-        <p><strong>VITE_SUPABASE_KEY:</strong> {envInfo.key}</p>
-        <p><strong>连接测试:</strong> {connectionTest}</p>
-        {error && <p className="text-red-600">错误: {error}</p>}
-      </div>
-      <button
-        onClick={testConnection}
-        className="mt-2 px-3 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600"
+    <div className="fixed bottom-4 right-4 bg-blue-50 border border-blue-300 p-3 rounded-lg shadow-lg z-50 max-w-xs">
+      <div 
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setShowDetails(!showDetails)}
       >
-        测试连接
-      </button>
+        <h3 className="font-bold text-blue-800 text-sm">🔧 连接诊断</h3>
+        <span className="text-blue-600 text-xs">{showDetails ? '▲' : '▼'}</span>
+      </div>
+      
+      <div className="text-xs mt-2 text-blue-700">
+        <p><strong>状态:</strong> {connectionTest}</p>
+        {error && <p className="text-red-600 mt-1">{error}</p>}
+      </div>
+      
+      {showDetails && (
+        <div className="text-xs space-y-1 text-blue-600 mt-2 pt-2 border-t border-blue-200">
+          <p><strong>SUPABASE_URL:</strong> {envInfo.url}</p>
+          <p><strong>SUPABASE_KEY:</strong> {envInfo.key}</p>
+          <button
+            onClick={(e) => { e.stopPropagation(); testConnection(); }}
+            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 w-full"
+          >
+            重新测试
+          </button>
+        </div>
+      )}
     </div>
   );
 }
