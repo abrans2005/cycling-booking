@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PullToRefresh from 'react-simple-pull-to-refresh';
 import { api } from '@/lib/supabase';
 import type { Booking } from '@/types';
 import { 
@@ -10,7 +11,8 @@ import {
   Search,
   CheckCircle2,
   XCircle,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +43,21 @@ export function MyBookings({ onBack }: MyBookingsProps) {
       console.error('查询失败:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 下拉刷新
+  const handleRefresh = async () => {
+    if (!phone.trim() || !searched) return;
+    
+    try {
+      const allBookings = await api.getBookings();
+      const myBookings = allBookings.filter(b => 
+        b.memberPhone.includes(phone.trim())
+      );
+      setBookings(myBookings);
+    } catch (error) {
+      console.error('刷新失败:', error);
     }
   };
 
@@ -116,17 +133,34 @@ export function MyBookings({ onBack }: MyBookingsProps) {
             <p className="text-gray-500">查询中...</p>
           </div>
         ) : bookings.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 text-center">
-            <XCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">未找到预约记录</p>
-            <p className="text-sm text-gray-400 mt-1">请检查手机号是否正确</p>
-          </div>
+          <PullToRefresh onRefresh={handleRefresh}>
+            <div className="bg-white rounded-xl p-8 text-center min-h-[200px]">
+              <XCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">未找到预约记录</p>
+              <p className="text-sm text-gray-400 mt-1">请检查手机号是否正确</p>
+            </div>
+          </PullToRefresh>
         ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500 mb-2">
-              共找到 {bookings.length} 条预约记录
-            </p>
-            {bookings.map((booking) => {
+          <PullToRefresh 
+            onRefresh={handleRefresh}
+            pullingContent={
+              <div className="flex items-center justify-center gap-2 py-3 text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">下拉刷新</span>
+              </div>
+            }
+            refreshingContent={
+              <div className="flex items-center justify-center gap-2 py-3 text-orange-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">刷新中...</span>
+              </div>
+            }
+          >
+            <div className="space-y-3">
+              <p className="text-sm text-gray-500 mb-2">
+                共找到 {bookings.length} 条预约记录
+              </p>
+              {bookings.map((booking) => {
               const duration = calculateDuration(booking.startTime, booking.endTime);
               const isCancelled = booking.status === 'cancelled';
               const isPast = new Date(booking.date) < new Date(new Date().toDateString());
@@ -198,7 +232,8 @@ export function MyBookings({ onBack }: MyBookingsProps) {
                 </div>
               );
             })}
-          </div>
+            </div>
+          </PullToRefresh>
         )}
       </div>
     </div>

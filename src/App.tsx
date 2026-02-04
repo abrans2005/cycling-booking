@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import PullToRefresh from 'react-simple-pull-to-refresh';
 import { CloudStatus } from '@/components/CloudStatus';
 import { Header } from '@/sections/Header';
 import { DateSelector } from '@/sections/DateSelector';
@@ -14,7 +15,7 @@ import { PhoneLogin } from '@/sections/PhoneLogin';
 import { StationManager } from '@/sections/StationManager';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
-import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2 } from 'lucide-react';
+import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { api } from '@/lib/supabase';
 import type { Booking, AppConfig, BikeModel, StationConfig } from '@/types';
 import { cn } from '@/lib/utils';
@@ -285,6 +286,15 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
     setTimeout(() => setMessage(null), 3000);
+  };
+
+  // 下拉刷新
+  const handlePullRefresh = async () => {
+    try {
+      await Promise.all([loadAllBookings(), loadConfig()]);
+    } catch (error) {
+      console.error('刷新失败:', error);
+    }
   };
 
   const handleCancel = async (id: string) => {
@@ -654,22 +664,37 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
       {/* 预约列表 */}
       <div className="mx-4 mt-4 pb-8">
-        {viewBookings.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 text-center">
-            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">
-              {statsView === 'day' && '今日暂无预约'}
-              {statsView === 'month' && `${currentMonth + 1}月暂无预约`}
-              {statsView === 'year' && `${currentYear}年暂无预约`}
-              {statsView === 'station' && '暂无预约记录'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-500 px-1">
-              共 {viewBookings.length} 条记录
-            </p>
-            {viewBookings.map((booking) => {
+        <PullToRefresh 
+          onRefresh={handlePullRefresh}
+          pullingContent={
+            <div className="flex items-center justify-center gap-2 py-3 text-gray-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">下拉刷新</span>
+            </div>
+          }
+          refreshingContent={
+            <div className="flex items-center justify-center gap-2 py-3 text-orange-500">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">刷新中...</span>
+            </div>
+          }
+        >
+          {viewBookings.length === 0 ? (
+            <div className="bg-white rounded-xl p-8 text-center min-h-[200px]">
+              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">
+                {statsView === 'day' && '今日暂无预约'}
+                {statsView === 'month' && `${currentMonth + 1}月暂无预约`}
+                {statsView === 'year' && `${currentYear}年暂无预约`}
+                {statsView === 'station' && '暂无预约记录'}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-500 px-1">
+                共 {viewBookings.length} 条记录
+              </p>
+              {viewBookings.map((booking) => {
               const duration = calculateDuration(booking.startTime, booking.endTime);
               const price = duration * config.pricePerHour;
               const isCancelled = booking.status === 'cancelled';
@@ -711,8 +736,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          )}
+        </PullToRefresh>
       </div>
 
       {/* 价格设置弹窗 */}
