@@ -15,7 +15,6 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  AlertCircle,
   Search,
   Bell,
   Check,
