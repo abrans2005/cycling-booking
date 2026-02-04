@@ -9,6 +9,11 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 // 是否使用 Supabase
 export const useSupabase = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
+// 调试信息
+console.log('[Supabase] URL:', SUPABASE_URL ? '已配置' : '未配置');
+console.log('[Supabase] Key:', SUPABASE_ANON_KEY ? '已配置' : '未配置');
+console.log('[Supabase] Mode:', useSupabase ? '云端模式 (Supabase)' : '本地模式 (localStorage)');
+
 // 创建 Supabase 客户端（仅在配置完整时）
 export const supabase = useSupabase 
   ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
@@ -262,65 +267,86 @@ const localApi = {
 
 const supabaseApi = {
   getBookings: async (date?: string): Promise<Booking[]> => {
-    if (!supabase) return [];
-    let query = supabase
-      .from('bookings')
-      .select('*')
-      .order('date', { ascending: true })
-      .order('start_time', { ascending: true });
+    if (!supabase) {
+      console.error('[Supabase] Client not initialized');
+      return [];
+    }
+    try {
+      let query = supabase
+        .from('bookings')
+        .select('*')
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
 
     if (date) {
       query = query.eq('date', date);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+      const { data, error } = await query;
+      if (error) {
+        console.error('[Supabase] getBookings error:', error);
+        throw error;
+      }
 
-    return (data || []).map(item => ({
-      id: item.id,
-      date: item.date,
-      startTime: item.start_time,
-      endTime: item.end_time,
-      stationId: item.station_id,
-      memberName: item.member_name,
-      memberPhone: item.member_phone,
-      notes: item.notes || '',
-      status: item.status,
-      createdAt: item.created_at,
-    }));
+      return (data || []).map(item => ({
+        id: item.id,
+        date: item.date,
+        startTime: item.start_time,
+        endTime: item.end_time,
+        stationId: item.station_id,
+        memberName: item.member_name,
+        memberPhone: item.member_phone,
+        notes: item.notes || '',
+        status: item.status,
+        createdAt: item.created_at,
+      }));
+    } catch (err) {
+      console.error('[Supabase] getBookings failed:', err);
+      throw err;
+    }
   },
 
   createBooking: async (booking: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> => {
     if (!supabase) throw new Error('Supabase not initialized');
-    const { data, error } = await supabase
-      .from('bookings')
-      .insert([{
-        date: booking.date,
-        start_time: booking.startTime,
-        end_time: booking.endTime,
-        station_id: booking.stationId,
-        member_name: booking.memberName,
-        member_phone: booking.memberPhone,
-        notes: booking.notes,
-        status: booking.status,
-      }])
-      .select()
-      .single();
+    try {
+      console.log('[Supabase] Creating booking:', booking);
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert([{
+          date: booking.date,
+          start_time: booking.startTime,
+          end_time: booking.endTime,
+          station_id: booking.stationId,
+          member_name: booking.memberName,
+          member_phone: booking.memberPhone,
+          notes: booking.notes,
+          status: booking.status,
+        }])
+        .select()
+        .single();
 
-    if (error) throw error;
+      if (error) {
+        console.error('[Supabase] createBooking error:', error);
+        throw error;
+      }
 
-    return {
-      id: data.id,
-      date: data.date,
-      startTime: data.start_time,
-      endTime: data.end_time,
-      stationId: data.station_id,
-      memberName: data.member_name,
-      memberPhone: data.member_phone,
-      notes: data.notes || '',
-      status: data.status,
-      createdAt: data.created_at,
-    };
+      console.log('[Supabase] Booking created:', data);
+      return {
+        id: data.id,
+        date: data.date,
+        startTime: data.start_time,
+        endTime: data.end_time,
+        stationId: data.station_id,
+        memberName: data.member_name,
+        memberPhone: data.member_phone,
+        notes: data.notes || '',
+        status: data.status,
+        createdAt: data.created_at,
+      };
+    } catch (err) {
+      console.error('[Supabase] createBooking failed:', err);
+      throw err;
+    }
   },
 
   cancelBooking: async (id: string): Promise<void> => {
