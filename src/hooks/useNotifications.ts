@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supabase, useSupabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import type { Booking, BookingNotification } from '@/types';
 
 export const useNotifications = () => {
@@ -110,7 +110,12 @@ export const useNotifications = () => {
 
   // 监听 Supabase Realtime 新预约
   useEffect(() => {
-    if (!useSupabase) return;
+    if (!supabase) {
+      console.log('[Notifications] Supabase not available, skipping realtime subscription');
+      return;
+    }
+
+    console.log('[Notifications] Setting up realtime subscription...');
 
     const channel = supabase
       .channel('booking-notifications')
@@ -122,17 +127,23 @@ export const useNotifications = () => {
           table: 'bookings',
         },
         (payload) => {
+          console.log('[Notifications] Received new booking:', payload);
           const newBooking = payload.new as Booking;
           // 只处理今天的预约
           const today = new Date().toISOString().split('T')[0];
+          console.log('[Notifications] Today:', today, 'Booking date:', newBooking.date);
           if (newBooking.date === today && newBooking.status === 'confirmed') {
+            console.log('[Notifications] Adding notification for booking:', newBooking.id);
             addNotification(newBooking);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[Notifications] Subscription status:', status);
+      });
 
     return () => {
+      console.log('[Notifications] Unsubscribing from realtime...');
       channel.unsubscribe();
     };
   }, [addNotification]);
