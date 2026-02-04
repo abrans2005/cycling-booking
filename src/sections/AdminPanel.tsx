@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/supabase';
 import type { Booking, BookingNotification } from '@/types';
 import { useNotifications } from '@/hooks/useNotifications';
+import { CloudStatus } from '@/components/CloudStatus';
 import { 
   Calendar, 
   Clock, 
@@ -329,8 +330,9 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
         </div>
       </div>
 
-      {/* 刷新按钮 */}
-      <div className="mx-4 mt-3 flex justify-end">
+      {/* 刷新按钮和云端状态 */}
+      <div className="mx-4 mt-3 flex items-center justify-between">
+        <CloudStatus />
         <Button
           variant="outline"
           size="sm"
