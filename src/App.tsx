@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { DebugInfo } from '@/components/DebugInfo';
+import { CloudStatus } from '@/components/CloudStatus';
 import { Header } from '@/sections/Header';
 import { DateSelector } from '@/sections/DateSelector';
 import { TimeSelector } from '@/sections/TimeSelector';
@@ -644,9 +645,12 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <span className="mr-1">📢</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
           </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={loadAllBookings} disabled={loading} className="text-gray-600">
-          <RefreshCw className={cn('w-4 h-4 mr-1', loading && 'animate-spin')} />刷新
-        </Button>
+        <div className="flex items-center gap-2">
+          <CloudStatus />
+          <Button variant="outline" size="sm" onClick={loadAllBookings} disabled={loading} className="text-gray-600">
+            <RefreshCw className={cn('w-4 h-4 mr-1', loading && 'animate-spin')} />刷新
+          </Button>
+        </div>
       </div>
 
       {/* 预约列表 */}
