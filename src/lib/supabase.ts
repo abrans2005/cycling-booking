@@ -43,6 +43,10 @@ const DEFAULT_CONFIG: AppConfig = {
     { stationId: 3, bikeModelId: 'neo', status: 'available', name: '3号骑行台' },
     { stationId: 4, bikeModelId: 'neo', status: 'available', name: '4号骑行台' },
   ],
+  businessHours: {
+    default: { open: '06:00', close: '22:00' },
+    exceptions: {},
+  },
   updatedAt: new Date().toISOString(),
 };
 
@@ -82,6 +86,29 @@ export const api = {
 
   // 创建预约
   createBooking: async (booking: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> => {
+    // 校验营业时间
+    const config = await api.getConfig();
+    const { isBusinessOpen, getBusinessHoursForDate } = await import('./businessHours');
+    
+    if (!isBusinessOpen(config.businessHours, booking.date)) {
+      throw new Error('该日期不营业，请选择其他日期');
+    }
+    
+    const hours = getBusinessHoursForDate(config.businessHours, booking.date);
+    const [startHour, startMinute] = booking.startTime.split(':').map(Number);
+    const [endHour, endMinute] = booking.endTime.split(':').map(Number);
+    const [openHour, openMinute] = hours.open.split(':').map(Number);
+    const [closeHour, closeMinute] = hours.close.split(':').map(Number);
+    
+    const startMinutes = startHour * 60 + startMinute;
+    const endMinutes = endHour * 60 + endMinute;
+    const openMinutes = openHour * 60 + openMinute;
+    const closeMinutes = closeHour * 60 + closeMinute;
+    
+    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+      throw new Error(`预约时间必须在营业时间内 (${hours.open} - ${hours.close})`);
+    }
+
     const { data, error } = await supabase
       .from('bookings')
       .insert([{
@@ -206,6 +233,7 @@ export const api = {
       pricePerHour: data.price_per_hour ?? DEFAULT_CONFIG.pricePerHour,
       stations: data.stations || DEFAULT_CONFIG.stations,
       bikeModels: data.bike_models || DEFAULT_CONFIG.bikeModels,
+      businessHours: data.business_hours || DEFAULT_CONFIG.businessHours,
       serverChanKey: data.server_chan_key,
       updatedAt: data.updated_at,
     };
@@ -230,6 +258,9 @@ export const api = {
     if (config.bikeModels !== undefined) {
       updateData.bike_models = config.bikeModels;
     }
+    if (config.businessHours !== undefined) {
+      updateData.business_hours = config.businessHours;
+    }
     
     const { data, error } = await supabase
       .from('config')
@@ -247,6 +278,7 @@ export const api = {
       stations: data.stations || DEFAULT_CONFIG.stations,
       serverChanKey: data.server_chan_key,
       bikeModels: data.bike_models || DEFAULT_CONFIG.bikeModels,
+      businessHours: data.business_hours || DEFAULT_CONFIG.businessHours,
       updatedAt: data.updated_at,
     };
   },

@@ -13,6 +13,7 @@ import { useBooking, useConfig } from '@/hooks/useBookingRealtime';
 import { useUser } from '@/hooks/useUser';
 import { PhoneLogin } from '@/sections/PhoneLogin';
 import { StationManager } from '@/sections/StationManager';
+import { BusinessHoursManager } from '@/sections/BusinessHoursManager';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2, Loader2 } from 'lucide-react';
@@ -135,8 +136,8 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
       />
 
       <main className="pb-8 pt-4">
-        <DateSelector selectedDate={formData.date} onSelectDate={handleSelectDate} />
-        <TimeSelector selectedTime={formData.startTime} onSelectTime={handleSelectTime} selectedDate={formData.date} />
+        <DateSelector selectedDate={formData.date} onSelectDate={handleSelectDate} businessHours={config.businessHours} />
+        <TimeSelector selectedTime={formData.startTime} onSelectTime={handleSelectTime} selectedDate={formData.date} businessHours={config.businessHours} />
         <DurationSelector duration={formData.duration} onSelectDuration={(d) => { updateFormData('duration', d); updateFormData('stationId', null); }} />
         <StationSelector selectedStation={formData.stationId} onSelectStation={(id) => updateFormData('stationId', id)} selectedDate={formData.date} selectedTime={formData.startTime} duration={formData.duration} />
         <BookingForm memberName={formData.memberName} memberPhone={formData.memberPhone} notes={formData.notes} onUpdateName={(n) => updateFormData('memberName', n)} onUpdatePhone={(p) => updateFormData('memberPhone', p)} onUpdateNotes={(n) => updateFormData('notes', n)} onSubmit={submitBooking} canSubmit={!!canSubmit} />
@@ -239,6 +240,10 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       { stationId: 3, bikeModelId: 'neo', status: 'available', name: '3号骑行台' },
       { stationId: 4, bikeModelId: 'neo', status: 'available', name: '4号骑行台' },
     ],
+    businessHours: {
+      default: { open: '06:00', close: '22:00' },
+      exceptions: {},
+    },
     updatedAt: new Date().toISOString(),
   });
   const [loading, setLoading] = useState(false);
@@ -254,6 +259,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [showServerChanModal, setShowServerChanModal] = useState(false);
   const [serverChanKey, setServerChanKey] = useState(config.serverChanKey || '');
   const [showStationManager, setShowStationManager] = useState(false);
+  const [showBusinessHoursManager, setShowBusinessHoursManager] = useState(false);
 
   // 加载所有数据
   const loadAllBookings = async () => {
@@ -383,6 +389,19 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       showMessage('success', 'Server酱配置已更新');
     } catch {
       showMessage('error', '保存失败');
+    }
+  };
+
+  // 保存营业时间配置
+  const handleSaveBusinessHours = async (businessHours: AppConfig['businessHours']) => {
+    try {
+      const updated = await api.updateConfig({ businessHours });
+      setConfig(updated);
+      setShowBusinessHoursManager(false);
+      showMessage('success', '营业时间已更新');
+    } catch {
+      showMessage('error', '保存失败');
+      throw new Error('保存失败');
     }
   };
 
@@ -650,6 +669,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           <Button variant="outline" size="sm" onClick={() => setShowStationManager(true)} className="text-blue-600 border-blue-200 hover:bg-blue-50">
             <span className="mr-1">🚲</span>骑行台管理
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowBusinessHoursManager(true)} className="text-orange-600 border-orange-200 hover:bg-orange-50">
+            <span className="mr-1">⏰</span>营业时间
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setServerChanKey(config.serverChanKey || ''); setShowServerChanModal(true); }} className={cn("border-purple-200 hover:bg-purple-50", config.serverChanKey ? "text-purple-600" : "text-gray-400")}>
             <span className="mr-1">📢</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
           </Button>
@@ -788,6 +810,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         bikeModels={config.bikeModels}
         allBookings={allBookings}
         onSave={handleSaveStationConfig}
+      />
+
+      {/* 营业时间设置弹窗 */}
+      <BusinessHoursManager
+        isOpen={showBusinessHoursManager}
+        onClose={() => setShowBusinessHoursManager(false)}
+        businessHours={config.businessHours}
+        onSave={handleSaveBusinessHours}
       />
 
       {/* Server酱配置弹窗 */}

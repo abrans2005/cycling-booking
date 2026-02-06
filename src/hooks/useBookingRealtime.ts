@@ -41,6 +41,10 @@ const DEFAULT_APP_CONFIG: AppConfig = {
     { stationId: 3, bikeModelId: 'neo', status: 'available', name: '3号骑行台' },
     { stationId: 4, bikeModelId: 'neo', status: 'available', name: '4号骑行台' },
   ],
+  businessHours: {
+    default: { open: '06:00', close: '22:00' },
+    exceptions: {},
+  },
   updatedAt: new Date().toISOString(),
 };
 

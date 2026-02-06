@@ -61,11 +61,25 @@ export interface User {
   lastLoginAt: string;
 }
 
+// 营业时间配置
+export interface BusinessHoursConfig {
+  default: {
+    open: string;    // 格式: "HH:MM"
+    close: string;   // 格式: "HH:MM"
+  };
+  exceptions: Record<string, {    // key: 日期 "YYYY-MM-DD"
+    isOpen: boolean;
+    open?: string;
+    close?: string;
+  }>;
+}
+
 // 系统配置
 export interface AppConfig {
   pricePerHour: number;
   stations: StationConfig[];      // 骑行台列表
   bikeModels: BikeModel[];        // 型号列表
+  businessHours: BusinessHoursConfig;  // 营业时间配置
   serverChanKey?: string;         // Server酱 SendKey
   updatedAt: string;
 }

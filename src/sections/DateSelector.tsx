@@ -1,18 +1,31 @@
-import { useDateOptions } from '@/hooks/useBookingRealtime';
 import { cn } from '@/lib/utils';
+import { isBusinessOpen } from '@/lib/businessHours';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
+import type { BusinessHoursConfig } from '@/types';
 
 interface DateSelectorProps {
   selectedDate: Date | undefined;
   onSelectDate: (date: Date) => void;
+  businessHours: BusinessHoursConfig;
 }
 
-export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) {
-  const dates = useDateOptions();
+export function DateSelector({ selectedDate, onSelectDate, businessHours }: DateSelectorProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+
+  // 生成未来14天的日期
+  const dates = (() => {
+    const result = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      result.push(date);
+    }
+    return result;
+  })();
 
   const checkScroll = () => {
     if (scrollRef.current) {
@@ -77,31 +90,39 @@ export function DateSelector({ selectedDate, onSelectDate }: DateSelectorProps) 
           {dates.map((date, index) => {
             const { month, day, weekday, isToday } = formatDate(date);
             const isSelected = selectedDate?.toDateString() === date.toDateString();
+            const dateStr = date.toISOString().split('T')[0];
+            const isOpen = isBusinessOpen(businessHours, dateStr);
             
             return (
               <button
                 key={index}
-                onClick={() => onSelectDate(date)}
+                onClick={() => isOpen && onSelectDate(date)}
+                disabled={!isOpen}
                 className={cn(
                   'flex-shrink-0 flex flex-col items-center justify-center w-16 h-20 rounded-xl border-2 transition-all',
                   isSelected
                     ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-200 bg-white hover:border-orange-300',
-                  isToday && !isSelected && 'border-orange-200 bg-orange-50/50'
+                    : isOpen
+                    ? 'border-gray-200 bg-white hover:border-orange-300'
+                    : 'border-gray-100 bg-gray-50 cursor-not-allowed',
+                  isToday && !isSelected && isOpen && 'border-orange-200 bg-orange-50/50'
                 )}
               >
-                <span className="text-xs text-gray-500">{month}月</span>
+                <span className={cn(
+                  'text-xs',
+                  isOpen ? 'text-gray-500' : 'text-gray-400'
+                )}>{month}月</span>
                 <span className={cn(
                   'text-xl font-bold',
-                  isSelected ? 'text-orange-600' : 'text-gray-800'
+                  isSelected ? 'text-orange-600' : isOpen ? 'text-gray-800' : 'text-gray-400'
                 )}>
                   {day}
                 </span>
                 <span className={cn(
                   'text-xs',
-                  isSelected ? 'text-orange-500' : 'text-gray-500'
+                  isSelected ? 'text-orange-500' : isOpen ? 'text-gray-500' : 'text-gray-400'
                 )}>
-                  {isToday ? '今天' : weekday}
+                  {isOpen ? (isToday ? '今天' : weekday) : '休息'}
                 </span>
               </button>
             );
