@@ -3,13 +3,17 @@ import type { BusinessHoursConfig } from '@/types';
 import { getBusinessHoursForDate } from '@/lib/businessHours';
 
 interface HeaderProps {
-  businessHours: BusinessHoursConfig;
+  businessHours?: BusinessHoursConfig;
 }
 
+const DEFAULT_HOURS = { open: '06:00', close: '22:00' };
+
 export function Header({ businessHours }: HeaderProps) {
-  // 获取今天的营业时间
+  // 获取今天的营业时间，使用默认值防止 undefined
   const today = new Date().toISOString().split('T')[0];
-  const { open, close } = getBusinessHoursForDate(businessHours, today);
+  const hours = businessHours 
+    ? getBusinessHoursForDate(businessHours, today)
+    : DEFAULT_HOURS;
 
   return (
     <header className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-6 px-4">
@@ -23,7 +27,7 @@ export function Header({ businessHours }: HeaderProps) {
         </div>
       </div>
       <div className="mt-4 text-center text-sm text-white/90">
-        <p>营业时间：每日 {open} - {close}</p>
+        <p>营业时间：每日 {hours.open} - {hours.close}</p>
       </div>
     </header>
   );
