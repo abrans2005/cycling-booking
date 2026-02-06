@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Clock, Calendar, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,15 +15,26 @@ interface BusinessHoursManagerProps {
 }
 
 export function BusinessHoursManager({ isOpen, onClose, businessHours, onSave }: BusinessHoursManagerProps) {
-  const [defaultOpen, setDefaultOpen] = useState(businessHours.default.open);
-  const [defaultClose, setDefaultClose] = useState(businessHours.default.close);
-  const [exceptions, setExceptions] = useState<Record<string, { isOpen: boolean; open?: string; close?: string }>>(
-    businessHours.exceptions || {}
-  );
+  const [defaultOpen, setDefaultOpen] = useState('06:00');
+  const [defaultClose, setDefaultClose] = useState('22:00');
+  const [exceptions, setExceptions] = useState<Record<string, { isOpen: boolean; open?: string; close?: string }>>({});
   const [newExceptionDate, setNewExceptionDate] = useState('');
   const [newExceptionOpen, setNewExceptionOpen] = useState('06:00');
   const [newExceptionClose, setNewExceptionClose] = useState('22:00');
   const [newExceptionIsOpen, setNewExceptionIsOpen] = useState(true);
+
+  // 每次打开弹窗时，从 props 重新加载数据
+  useEffect(() => {
+    if (isOpen) {
+      setDefaultOpen(businessHours.default.open);
+      setDefaultClose(businessHours.default.close);
+      setExceptions(businessHours.exceptions || {});
+      setNewExceptionDate('');
+      setNewExceptionOpen('06:00');
+      setNewExceptionClose('22:00');
+      setNewExceptionIsOpen(true);
+    }
+  }, [isOpen, businessHours]);
 
   // 生成未来30天的日期选项
   const dateOptions = useMemo(() => {
