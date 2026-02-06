@@ -1,6 +1,16 @@
 import { Bike } from 'lucide-react';
+import type { BusinessHoursConfig } from '@/types';
+import { getBusinessHoursForDate } from '@/lib/businessHours';
 
-export function Header() {
+interface HeaderProps {
+  businessHours: BusinessHoursConfig;
+}
+
+export function Header({ businessHours }: HeaderProps) {
+  // 获取今天的营业时间
+  const today = new Date().toISOString().split('T')[0];
+  const { open, close } = getBusinessHoursForDate(businessHours, today);
+
   return (
     <header className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-6 px-4">
       <div className="flex items-center justify-center gap-3">
@@ -13,7 +23,7 @@ export function Header() {
         </div>
       </div>
       <div className="mt-4 text-center text-sm text-white/90">
-        <p>营业时间：每日 06:00 - 22:00</p>
+        <p>营业时间：每日 {open} - {close}</p>
       </div>
     </header>
   );

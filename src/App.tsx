@@ -94,7 +94,7 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
         </button>
       </div>
 
-      <Header />
+      <Header businessHours={config.businessHours} />
 
       {/* 用户登录状态栏 */}
       <div className="px-4 pt-2">
