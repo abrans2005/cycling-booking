@@ -137,7 +137,7 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
 
       <main className="pb-8 pt-4">
         <DateSelector selectedDate={formData.date} onSelectDate={handleSelectDate} businessHours={config.businessHours} />
-        <TimeSelector selectedTime={formData.startTime} onSelectTime={handleSelectTime} selectedDate={formData.date} businessHours={config.businessHours} />
+        <TimeSelector selectedTime={formData.startTime} onSelectTime={handleSelectTime} selectedDate={formData.date} businessHours={config.businessHours} duration={formData.duration} />
         <DurationSelector duration={formData.duration} onSelectDuration={(d) => { updateFormData('duration', d); updateFormData('stationId', null); }} />
         <StationSelector selectedStation={formData.stationId} onSelectStation={(id) => updateFormData('stationId', id)} selectedDate={formData.date} selectedTime={formData.startTime} duration={formData.duration} />
         <BookingForm memberName={formData.memberName} memberPhone={formData.memberPhone} notes={formData.notes} onUpdateName={(n) => updateFormData('memberName', n)} onUpdatePhone={(p) => updateFormData('memberPhone', p)} onUpdateNotes={(n) => updateFormData('notes', n)} onSubmit={submitBooking} canSubmit={!!canSubmit} />

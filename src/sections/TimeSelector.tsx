@@ -8,9 +8,10 @@ interface TimeSelectorProps {
   onSelectTime: (time: string) => void;
   selectedDate: Date | undefined;
   businessHours: BusinessHoursConfig;
+  duration: number; // 添加时长参数，用于过滤可选时间段
 }
 
-export function TimeSelector({ selectedTime, onSelectTime, selectedDate, businessHours }: TimeSelectorProps) {
+export function TimeSelector({ selectedTime, onSelectTime, selectedDate, businessHours, duration }: TimeSelectorProps) {
   // 如果没有选择日期，不显示时间段
   if (!selectedDate) {
     return (
@@ -48,9 +49,15 @@ export function TimeSelector({ selectedTime, onSelectTime, selectedDate, busines
 
   // 获取该日期的营业时间
   const { open, close } = getBusinessHoursForDate(businessHours, dateStr);
+  const [closeHour, closeMinute] = close.split(':').map(Number);
+  const closeMinutes = closeHour * 60 + closeMinute;
   
-  // 生成时间段
-  const timeSlots = generateTimeSlots(open, close, 30);
+  // 生成时间段，并过滤掉会导致结束时间超时的选项
+  const timeSlots = generateTimeSlots(open, close, 30).filter(slot => {
+    const slotMinutes = slot.hour * 60 + slot.minute;
+    const endMinutes = slotMinutes + duration * 60; // 计算结束时间
+    return endMinutes <= closeMinutes; // 确保结束时间不超过营业时间
+  });
 
   // 过滤掉已过期的时间段（如果是今天）
   const availableSlots = timeSlots.filter(slot => {
