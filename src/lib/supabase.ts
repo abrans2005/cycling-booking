@@ -90,23 +90,26 @@ export const api = {
     const config = await api.getConfig();
     const { isBusinessOpen, getBusinessHoursForDate } = await import('./businessHours');
     
-    if (!isBusinessOpen(config.businessHours, booking.date)) {
-      throw new Error('该日期不营业，请选择其他日期');
-    }
-    
-    const hours = getBusinessHoursForDate(config.businessHours, booking.date);
-    const [startHour, startMinute] = booking.startTime.split(':').map(Number);
-    const [endHour, endMinute] = booking.endTime.split(':').map(Number);
-    const [openHour, openMinute] = hours.open.split(':').map(Number);
-    const [closeHour, closeMinute] = hours.close.split(':').map(Number);
-    
-    const startMinutes = startHour * 60 + startMinute;
-    const endMinutes = endHour * 60 + endMinute;
-    const openMinutes = openHour * 60 + openMinute;
-    const closeMinutes = closeHour * 60 + closeMinute;
-    
-    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
-      throw new Error(`预约时间必须在营业时间内 (${hours.open} - ${hours.close})`);
+    // 如果没有营业时间配置，跳过校验（兼容旧数据）
+    if (config.businessHours) {
+      if (!isBusinessOpen(config.businessHours, booking.date)) {
+        throw new Error('该日期不营业，请选择其他日期');
+      }
+      
+      const hours = getBusinessHoursForDate(config.businessHours, booking.date);
+      const [startHour, startMinute] = booking.startTime.split(':').map(Number);
+      const [endHour, endMinute] = booking.endTime.split(':').map(Number);
+      const [openHour, openMinute] = hours.open.split(':').map(Number);
+      const [closeHour, closeMinute] = hours.close.split(':').map(Number);
+      
+      const startMinutes = startHour * 60 + startMinute;
+      const endMinutes = endHour * 60 + endMinute;
+      const openMinutes = openHour * 60 + openMinute;
+      const closeMinutes = closeHour * 60 + closeMinute;
+      
+      if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+        throw new Error(`预约时间必须在营业时间内 (${hours.open} - ${hours.close})`);
+      }
     }
 
     const { data, error } = await supabase

@@ -1,14 +1,23 @@
 import type { BusinessHoursConfig } from '@/types';
 
+// 默认营业时间
+const DEFAULT_BUSINESS_HOURS: BusinessHoursConfig = {
+  default: { open: '06:00', close: '22:00' },
+  exceptions: {},
+};
+
 /**
  * 检查指定日期是否营业
  */
 export function isBusinessOpen(
-  businessHours: BusinessHoursConfig,
+  businessHours: BusinessHoursConfig | undefined,
   dateStr: string  // 'YYYY-MM-DD'
 ): boolean {
+  // 如果没有配置，使用默认配置（默认营业）
+  const hours = businessHours || DEFAULT_BUSINESS_HOURS;
+  
   // 先检查是否有特殊日期配置
-  const exception = businessHours.exceptions[dateStr];
+  const exception = hours.exceptions[dateStr];
   if (exception) {
     return exception.isOpen;
   }
@@ -21,17 +30,20 @@ export function isBusinessOpen(
  * @returns { open: string, close: string } 格式 "HH:MM"
  */
 export function getBusinessHoursForDate(
-  businessHours: BusinessHoursConfig,
+  businessHours: BusinessHoursConfig | undefined,
   dateStr: string
 ): { open: string; close: string } {
-  const exception = businessHours.exceptions[dateStr];
+  // 如果没有配置，使用默认配置
+  const hours = businessHours || DEFAULT_BUSINESS_HOURS;
+  
+  const exception = hours.exceptions[dateStr];
   if (exception && exception.isOpen) {
     return {
-      open: exception.open || businessHours.default.open,
-      close: exception.close || businessHours.default.close,
+      open: exception.open || hours.default.open,
+      close: exception.close || hours.default.close,
     };
   }
-  return businessHours.default;
+  return hours.default;
 }
 
 /**
