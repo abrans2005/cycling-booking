@@ -56,7 +56,10 @@ export const useConfig = () => {
   const loadConfig = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getConfig();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), 8000);
+      });
+      const data = await Promise.race([api.getConfig(), timeoutPromise]);
       setConfig(data);
     } catch (err) {
       console.error('加载配置失败:', err);
@@ -114,11 +117,14 @@ export const useBooking = (pricePerHour: number = 100) => {
   const [error, setError] = useState<string | null>(null);
   const isInitialized = useRef(false);
 
-  // 加载预约数据
+  // 加载预约数据（带超时保护）
   const loadBookings = useCallback(async () => {
     try {
       const date = formData.date?.toISOString().split('T')[0];
-      const data = await api.getBookings(date);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), 8000);
+      });
+      const data = await Promise.race([api.getBookings(date), timeoutPromise]);
       setBookings(data);
     } catch (err) {
       console.error('加载预约失败:', err);

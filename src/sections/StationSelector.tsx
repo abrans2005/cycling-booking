@@ -94,21 +94,33 @@ export function StationSelector({
         const endMinute = minute + (duration % 1) * 60;
         const endTime = `${endHour.toString().padStart(2, '0')}:${Math.round(endMinute).toString().padStart(2, '0')}`;
 
-        const available: number[] = [];
-        for (const station of availableStations) {
+        // 使用 Promise.all 并发检查，并添加超时保护
+        const checkPromises = availableStations.map(async (station) => {
           try {
-            const isAvailable = await api.checkStationAvailability(station.id, dateStr, selectedTime, endTime);
-            if (isAvailable) {
-              available.push(station.id);
-            }
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒超时
+            
+            const isAvailable = await Promise.race([
+              api.checkStationAvailability(station.id, dateStr, selectedTime, endTime),
+              new Promise<boolean>((_, reject) => {
+                setTimeout(() => reject(new Error('Timeout')), 5000);
+              })
+            ]);
+            
+            clearTimeout(timeoutId);
+            return { id: station.id, available: isAvailable };
           } catch {
-            // 如果检查失败，默认设为可用
-            available.push(station.id);
+            // 如果检查失败或超时，默认设为可用
+            return { id: station.id, available: true };
           }
-        }
+        });
+
+        const results = await Promise.all(checkPromises);
+        const available = results.filter(r => r.available).map(r => r.id);
         setTimeAvailableStationIds(available);
       } catch (err) {
         console.error('检查可用性失败:', err);
+        // 出错时默认所有骑行台都可用
         setTimeAvailableStationIds(availableStations.map(s => s.id));
       } finally {
         setLoading(false);

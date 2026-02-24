@@ -76,21 +76,33 @@ const DEFAULT_CONFIG: AppConfig = {
 export const api = {
   // 获取预约列表
   getBookings: async (date?: string): Promise<Booking[]> => {
+    console.log('[Supabase] getBookings called, date:', date);
+    
     let query = supabase
       .from('bookings')
       .select('*')
-      .order('date', { ascending: true })
+      .order('date', { ascending: false })  // 最新的在前面
       .order('start_time', { ascending: true });
 
     if (date) {
       query = query.eq('date', date);
+    } else {
+      // 如果没有指定日期，只返回最近 90 天的数据（性能优化）
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      query = query.gte('date', ninetyDaysAgo.toISOString().split('T')[0]);
     }
+
+    // 限制返回数量，避免大数据量导致超时
+    query = query.limit(1000);
 
     const { data, error } = await query;
     if (error) {
       console.error('[Supabase] getBookings error:', error);
       throw new Error(`获取预约失败: ${error.message}`);
     }
+
+    console.log('[Supabase] getBookings success, count:', data?.length || 0);
 
     return (data || []).map(item => ({
       id: item.id,
@@ -202,9 +214,10 @@ export const api = {
     endTime: string,
     excludeBookingId?: string
   ): Promise<boolean> => {
+    // 只查询必要字段，减少数据传输
     let query = supabase
       .from('bookings')
-      .select('*')
+      .select('start_time,end_time')
       .eq('station_id', stationId)
       .eq('date', date)
       .neq('status', 'cancelled');
@@ -239,6 +252,8 @@ export const api = {
 
   // 获取系统配置
   getConfig: async (): Promise<AppConfig> => {
+    console.log('[Supabase] getConfig called');
+    
     const { data, error } = await supabase
       .from('config')
       .select('*')
@@ -248,11 +263,14 @@ export const api = {
     if (error) {
       // 如果没有配置记录，返回默认配置
       if (error.code === 'PGRST116') {
+        console.log('[Supabase] getConfig: no config found, using default');
         return DEFAULT_CONFIG;
       }
       console.error('[Supabase] getConfig error:', error);
       throw new Error(`获取配置失败: ${error.message}`);
     }
+    
+    console.log('[Supabase] getConfig success');
     
     return {
       pricePerHour: data.price_per_hour ?? DEFAULT_CONFIG.pricePerHour,

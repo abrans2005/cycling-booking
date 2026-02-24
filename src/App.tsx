@@ -263,26 +263,33 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [showBusinessHoursManager, setShowBusinessHoursManager] = useState(false);
   const [showDataAnalytics, setShowDataAnalytics] = useState(false);
 
-  // 加载所有数据
+  // 加载所有数据（带超时保护）
   const loadAllBookings = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.getBookings();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), 10000); // 10秒超时
+      });
+      const data = await Promise.race([api.getBookings(), timeoutPromise]);
       setAllBookings(data);
-    } catch {
-      showMessage('error', '加载数据失败');
+    } catch (err) {
+      console.error('加载预约数据失败:', err);
+      showMessage('error', err instanceof Error ? err.message : '加载数据失败，请检查网络');
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // 加载配置
+  // 加载配置（带超时保护）
   const loadConfig = useCallback(async () => {
     try {
-      const data = await api.getConfig();
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('请求超时')), 10000);
+      });
+      const data = await Promise.race([api.getConfig(), timeoutPromise]);
       setConfig(data);
-    } catch {
-      console.error('加载配置失败');
+    } catch (err) {
+      console.error('加载配置失败:', err);
     }
   }, []);
 
