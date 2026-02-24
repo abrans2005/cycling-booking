@@ -322,11 +322,31 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
       {/* 图表区域 */}
       <div className="px-4 pb-8 space-y-4">
         <Tabs defaultValue="trend" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white">
-            <TabsTrigger value="trend">趋势</TabsTrigger>
-            <TabsTrigger value="hourly">时段</TabsTrigger>
-            <TabsTrigger value="station">骑行台</TabsTrigger>
-            <TabsTrigger value="weekday">星期</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1">
+            <TabsTrigger 
+              value="trend"
+              className="data-[state=active]:bg-orange-500 data-[state=active]:text-white text-gray-600 rounded-md transition-all"
+            >
+              趋势
+            </TabsTrigger>
+            <TabsTrigger 
+              value="hourly"
+              className="data-[state=active]:bg-blue-500 data-[state=active]:text-white text-gray-600 rounded-md transition-all"
+            >
+              时段
+            </TabsTrigger>
+            <TabsTrigger 
+              value="station"
+              className="data-[state=active]:bg-green-500 data-[state=active]:text-white text-gray-600 rounded-md transition-all"
+            >
+              骑行台
+            </TabsTrigger>
+            <TabsTrigger 
+              value="weekday"
+              className="data-[state=active]:bg-purple-500 data-[state=active]:text-white text-gray-600 rounded-md transition-all"
+            >
+              星期
+            </TabsTrigger>
           </TabsList>
 
           {/* 趋势图 */}
