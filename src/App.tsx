@@ -63,7 +63,7 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
         startTime: lastBooking.startTime,
         endTime: lastBooking.endTime,
         stationId: lastBooking.stationId,
-        bikeModelId: stationConfig?.bikeModelId,
+        bikeModel: stationConfig?.bikeModelId,
         price: duration * config.pricePerHour,
         notes: lastBooking.notes,
       });

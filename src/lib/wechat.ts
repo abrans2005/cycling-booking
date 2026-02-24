@@ -87,7 +87,7 @@ export const initWechatSDK = async (config: {
   
   return new Promise((resolve) => {
     // 动态加载微信 JS-SDK
-    if (!(window as Record<string, unknown>).wx) {
+    if (!(window as unknown as Record<string, unknown>).wx) {
       const script = document.createElement('script');
       script.src = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js';
       script.onload = () => {
@@ -101,6 +101,38 @@ export const initWechatSDK = async (config: {
   });
 };
 
+// 微信 JS-SDK 类型定义
+interface WechatSDK {
+  config: (options: {
+    debug: boolean;
+    appId: string;
+    timestamp: string;
+    nonceStr: string;
+    signature: string;
+    jsApiList: string[];
+  }) => void;
+  ready: (callback: () => void) => void;
+  error: (callback: () => void) => void;
+  getUserProfile: (options: {
+    desc: string;
+    success: (res: { userInfo: { nickName: string; avatarUrl: string } }) => void;
+    fail: () => void;
+  }) => void;
+  updateAppMessageShareData: (options: {
+    title: string;
+    desc: string;
+    link: string;
+    imgUrl: string;
+    success?: () => void;
+  }) => void;
+  updateTimelineShareData: (options: {
+    title: string;
+    link: string;
+    imgUrl: string;
+    success?: () => void;
+  }) => void;
+}
+
 // 配置微信 JS-SDK
 interface WechatConfig {
   appId: string;
@@ -110,7 +142,7 @@ interface WechatConfig {
 }
 
 const configureWX = (config: WechatConfig, callback: (success: boolean) => void) => {
-  const wx = (window as Record<string, unknown>).wx as Record<string, ((...args: unknown[]) => void) | unknown>;
+  const wx = (window as unknown as Record<string, unknown>).wx as WechatSDK | undefined;
   if (!wx) {
     callback(false);
     return;
@@ -137,7 +169,7 @@ const configureWX = (config: WechatConfig, callback: (success: boolean) => void)
 // 获取微信用户信息（需要用户点击触发）
 export const getWechatUserProfile = (): Promise<WechatUserInfo | null> => {
   return new Promise((resolve) => {
-    const wx = (window as any).wx;
+    const wx = (window as unknown as Record<string, unknown>).wx as WechatSDK | undefined;
     if (!wx) {
       resolve(null);
       return;
@@ -146,7 +178,7 @@ export const getWechatUserProfile = (): Promise<WechatUserInfo | null> => {
     // 注意：wx.getUserProfile 需要用户点击触发
     wx.getUserProfile({
       desc: '用于完善会员资料',
-      success: (res: { userInfo: { nickName: string; avatarUrl: string } }) => {
+      success: (res) => {
         const userInfo: WechatUserInfo = {
           nickname: res.userInfo.nickName,
           avatarUrl: res.userInfo.avatarUrl,
