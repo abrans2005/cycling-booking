@@ -14,6 +14,7 @@ import { useUser } from '@/hooks/useUser';
 import { PhoneLogin } from '@/sections/PhoneLogin';
 import { StationManager } from '@/sections/StationManager';
 import { BusinessHoursManager } from '@/sections/BusinessHoursManager';
+import { DataAnalytics } from '@/sections/DataAnalytics';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2, Loader2 } from 'lucide-react';
@@ -260,6 +261,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [serverChanKey, setServerChanKey] = useState(config.serverChanKey || '');
   const [showStationManager, setShowStationManager] = useState(false);
   const [showBusinessHoursManager, setShowBusinessHoursManager] = useState(false);
+  const [showDataAnalytics, setShowDataAnalytics] = useState(false);
 
   // 加载所有数据
   const loadAllBookings = useCallback(async () => {
@@ -530,6 +532,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
   const dateDisplay = getDateDisplay();
 
+  // 数据分析页面
+  if (showDataAnalytics) {
+    return <DataAnalytics bookings={allBookings} config={config} onBack={() => setShowDataAnalytics(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <header className="bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 px-4">
@@ -671,6 +678,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setShowStationManager(true)} className="text-blue-600 border-blue-200 hover:bg-blue-50">
             <span className="mr-1">🚲</span>骑行台管理
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowDataAnalytics(true)} className="text-green-600 border-green-200 hover:bg-green-50">
+            <span className="mr-1">📊</span>数据分析
           </Button>
           <Button variant="outline" size="sm" onClick={() => setShowBusinessHoursManager(true)} className="text-orange-600 border-orange-200 hover:bg-orange-50">
             <span className="mr-1">⏰</span>营业时间
@@ -875,7 +885,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 
 // 主应用
 function App() {
-  const [view, setView] = useState<'booking' | 'query' | 'adminLogin' | 'adminPanel'>('booking');
+  const [view, setView] = useState<'booking' | 'query' | 'adminLogin' | 'adminPanel' | 'dataAnalytics'>('booking');
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => 
     sessionStorage.getItem('admin_logged_in') === 'true'
   );
