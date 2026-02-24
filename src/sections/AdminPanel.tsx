@@ -59,7 +59,7 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
       const dateStr = currentDate.toISOString().split('T')[0];
       const data = await api.getBookings(dateStr);
       setBookings(data);
-    } catch (error) {
+    } catch {
       showMessage('error', '加载数据失败');
     } finally {
       setLoading(false);
@@ -68,6 +68,7 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
 
   useEffect(() => {
     loadBookings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDate]);
 
   // 显示消息
@@ -83,7 +84,7 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
       await api.cancelBooking(id);
       showMessage('success', '预约已取消');
       loadBookings();
-    } catch (error) {
+    } catch {
       showMessage('error', '取消失败');
     }
   };
@@ -95,7 +96,7 @@ export function AdminPanel({ onLogout }: AdminPanelProps) {
       await api.deleteBooking(id);
       showMessage('success', '预约已删除');
       loadBookings();
-    } catch (error) {
+    } catch {
       showMessage('error', '删除失败');
     }
   };

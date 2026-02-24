@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Info, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Announcement } from '@/types';
@@ -8,19 +8,19 @@ interface AnnouncementBannerProps {
 }
 
 export function AnnouncementBanner({ announcements }: AnnouncementBannerProps) {
-  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
-
-  // 从 localStorage 读取已关闭的公告
-  useEffect(() => {
+  // 使用懒加载初始化，避免在 effect 中调用 setState
+  const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
     const saved = localStorage.getItem('dismissed_announcements');
     if (saved) {
       try {
-        setDismissedIds(JSON.parse(saved));
+        return JSON.parse(saved);
       } catch {
-        // ignore
+        return [];
       }
     }
-  }, []);
+    return [];
+  });
 
   // 保存到 localStorage
   const dismissAnnouncement = (id: string) => {

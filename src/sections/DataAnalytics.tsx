@@ -81,23 +81,23 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
     });
   }, [bookings, timeRange]);
 
-  // 计算时长
-  const calculateDuration = (startTime: string, endTime: string) => {
-    const [sh, sm] = startTime.split(':').map(Number);
-    const [eh, em] = endTime.split(':').map(Number);
-    return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-  };
-
-  // 计算收入
-  const calculateRevenue = (booking: Booking) => {
-    return calculateDuration(booking.startTime, booking.endTime) * config.pricePerHour;
-  };
-
   // 核心指标
   const metrics = useMemo(() => {
+    // 计算时长
+    const calcDuration = (startTime: string, endTime: string) => {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+    };
+
+    // 计算收入
+    const calcRevenue = (booking: Booking) => {
+      return calcDuration(booking.startTime, booking.endTime) * config.pricePerHour;
+    };
+
     const confirmed = filteredBookings;
-    const totalRevenue = confirmed.reduce((sum, b) => sum + calculateRevenue(b), 0);
-    const totalHours = confirmed.reduce((sum, b) => sum + calculateDuration(b.startTime, b.endTime), 0);
+    const totalRevenue = confirmed.reduce((sum, b) => sum + calcRevenue(b), 0);
+    const totalHours = confirmed.reduce((sum, b) => sum + calcDuration(b.startTime, b.endTime), 0);
     const uniqueUsers = new Set(confirmed.map(b => b.memberPhone)).size;
     const avgOrderValue = confirmed.length > 0 ? totalRevenue / confirmed.length : 0;
 
@@ -108,10 +108,20 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
       uniqueUsers,
       avgOrderValue,
     };
-  }, [filteredBookings]);
+  }, [filteredBookings, config.pricePerHour]);
 
   // 趋势数据（按日期）
   const trendData = useMemo(() => {
+    // 计算时长和收入的辅助函数
+    const calcDuration = (startTime: string, endTime: string) => {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+    };
+    const calcRevenue = (booking: Booking) => {
+      return calcDuration(booking.startTime, booking.endTime) * config.pricePerHour;
+    };
+
     const dateMap = new Map<string, { date: string; bookings: number; revenue: number; hours: number }>();
 
     // 初始化日期范围
@@ -125,8 +135,8 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
 
     filteredBookings.forEach(booking => {
       const existing = dateMap.get(booking.date);
-      const duration = calculateDuration(booking.startTime, booking.endTime);
-      const revenue = calculateRevenue(booking);
+      const duration = calcDuration(booking.startTime, booking.endTime);
+      const revenue = calcRevenue(booking);
 
       if (existing) {
         existing.bookings += 1;
@@ -148,10 +158,20 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
         ...item,
         displayDate: format(parseISO(item.date), timeRange === '7days' ? 'MM-dd' : 'MM-dd'),
       }));
-  }, [filteredBookings, timeRange]);
+  }, [filteredBookings, timeRange, config.pricePerHour]);
 
   // 时段热度数据
   const hourlyData = useMemo(() => {
+    // 计算收入的辅助函数
+    const calcDuration = (startTime: string, endTime: string) => {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+    };
+    const calcRevenue = (booking: Booking) => {
+      return calcDuration(booking.startTime, booking.endTime) * config.pricePerHour;
+    };
+
     const hourMap = new Map<number, { hour: number; bookings: number; revenue: number }>();
 
     // 初始化 6-22 点
@@ -164,7 +184,7 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
       const existing = hourMap.get(hour);
       if (existing) {
         existing.bookings += 1;
-        existing.revenue += calculateRevenue(booking);
+        existing.revenue += calcRevenue(booking);
       }
     });
 
@@ -172,19 +192,29 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
       ...item,
       displayHour: `${item.hour}:00`,
     }));
-  }, [filteredBookings]);
+  }, [filteredBookings, config.pricePerHour]);
 
   // 骑行台使用数据
   const stationData = useMemo(() => {
+    // 计算时长和收入的辅助函数
+    const calcDuration = (startTime: string, endTime: string) => {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+    };
+    const calcRevenue = (booking: Booking) => {
+      return calcDuration(booking.startTime, booking.endTime) * config.pricePerHour;
+    };
+
     return config.stations
       .filter(s => s.status !== 'disabled')
       .map(station => {
         const stationBookings = filteredBookings.filter(b => b.stationId === station.stationId);
         const totalHours = stationBookings.reduce(
-          (sum, b) => sum + calculateDuration(b.startTime, b.endTime),
+          (sum, b) => sum + calcDuration(b.startTime, b.endTime),
           0
         );
-        const revenue = stationBookings.reduce((sum, b) => sum + calculateRevenue(b), 0);
+        const revenue = stationBookings.reduce((sum, b) => sum + calcRevenue(b), 0);
 
         return {
           name: station.name || `${station.stationId}号骑行台`,
@@ -199,6 +229,16 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
 
   // 星期分布数据
   const weekdayData = useMemo(() => {
+    // 计算收入的辅助函数
+    const calcDuration = (startTime: string, endTime: string) => {
+      const [sh, sm] = startTime.split(':').map(Number);
+      const [eh, em] = endTime.split(':').map(Number);
+      return ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+    };
+    const calcRevenue = (booking: Booking) => {
+      return calcDuration(booking.startTime, booking.endTime) * config.pricePerHour;
+    };
+
     const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
     const data = weekdays.map((day) => ({
       name: day,
@@ -210,11 +250,11 @@ export function DataAnalytics({ bookings, config, onBack }: DataAnalyticsProps) 
       const date = parseISO(booking.date);
       const dayIndex = date.getDay();
       data[dayIndex].bookings += 1;
-      data[dayIndex].revenue += calculateRevenue(booking);
+      data[dayIndex].revenue += calcRevenue(booking);
     });
 
     return data;
-  }, [filteredBookings]);
+  }, [filteredBookings, config.pricePerHour]);
 
   // 导出数据
   const handleExport = () => {
