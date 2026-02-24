@@ -716,7 +716,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <span className="mr-1">📣</span>公告管理
           </Button>
           <Button variant="outline" size="sm" onClick={() => { setServerChanKey(config.serverChanKey || ''); setShowServerChanModal(true); }} className={cn("border-purple-200 hover:bg-purple-50", config.serverChanKey ? "text-purple-600" : "text-gray-400")}>
-            <span className="mr-1">🔔</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
+            <span className="mr-1">🔔</span>消息推送{config.serverChanKey ? '已配置' : '未配置'}
           </Button>
         </div>
         <div className="flex items-center gap-2">
@@ -868,7 +868,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 animate-zoom-in">
             <h3 className="text-lg font-bold text-gray-800 mb-2">配置 Server酱</h3>
-            <p className="text-sm text-gray-500 mb-4">预约消息将推送到教练微信</p>
+            <p className="text-sm text-gray-500 mb-4">预约消息将推送到管理端（支持微信、钉钉等）</p>
             <div className="space-y-4">
               <div>
                 <label className="text-sm text-gray-600 mb-1.5 block">SendKey</label>
@@ -888,7 +888,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                   <strong>配置步骤：</strong><br/>
                   1. 访问 sct.ftqq.com 登录<br/>
                   2. 点击「Channel」→「添加通道」<br/>
-                  3. 选择「企业微信应用」或「Server酱」<br/>
+                  3. 选择推送渠道（微信、钉钉等）<br/>
                   4. 复制 SendKey 粘贴到上方
                 </p>
               </div>

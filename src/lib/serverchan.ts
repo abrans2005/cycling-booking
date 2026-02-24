@@ -1,5 +1,6 @@
-// Server酱 微信推送服务
+// Server酱 消息推送服务
 // 文档：https://sct.ftqq.com/
+// 支持：微信、企业微信、钉钉、飞书等多种渠道
 
 const SERVER_CHAN_API = 'https://sctapi.ftqq.com';
 
@@ -93,7 +94,7 @@ export const sendBookingNotification = async (
   ].join('\n\n');
 
   return sendServerChanMessage(sendkey, title, content, {
-    short: `${booking.memberName} 预约了 ${booking.date} ${booking.startTime}`,
+    short: `${booking.memberName} 预约了 ${booking.date} ${booking.startTime} 的骑行台`,
   });
 };
 
