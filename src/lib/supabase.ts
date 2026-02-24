@@ -278,6 +278,7 @@ export const api = {
       bikeModels: data.bike_models || DEFAULT_CONFIG.bikeModels,
       businessHours: data.business_hours || DEFAULT_CONFIG.businessHours,
       serverChanKey: data.server_chan_key,
+      announcements: data.announcements || [],
       updatedAt: data.updated_at,
     };
   },
@@ -304,6 +305,9 @@ export const api = {
     if (config.businessHours !== undefined) {
       updateData.business_hours = config.businessHours;
     }
+    if (config.announcements !== undefined) {
+      updateData.announcements = config.announcements;
+    }
     
     const { data, error } = await supabase
       .from('config')
@@ -322,6 +326,7 @@ export const api = {
       serverChanKey: data.server_chan_key,
       bikeModels: data.bike_models || DEFAULT_CONFIG.bikeModels,
       businessHours: data.business_hours || DEFAULT_CONFIG.businessHours,
+      announcements: data.announcements || [],
       updatedAt: data.updated_at,
     };
   },

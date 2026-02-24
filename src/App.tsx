@@ -15,6 +15,8 @@ import { PhoneLogin } from '@/sections/PhoneLogin';
 import { StationManager } from '@/sections/StationManager';
 import { BusinessHoursManager } from '@/sections/BusinessHoursManager';
 import { DataAnalytics } from '@/sections/DataAnalytics';
+import { AnnouncementManager } from '@/sections/AnnouncementManager';
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 import { Search, Lock, Eye, EyeOff, Bike, LogOut, ArrowLeft, RefreshCw, ChevronLeft, ChevronRight, Calendar, Clock, User, Phone, Trash2, XCircle, CheckCircle2, Loader2 } from 'lucide-react';
@@ -96,6 +98,11 @@ function BookingPage({ onQueryClick, onAdminClick }: { onQueryClick: () => void;
       </div>
 
       <Header businessHours={config.businessHours} />
+
+      {/* 系统公告 */}
+      <div className="px-4 pt-2">
+        <AnnouncementBanner announcements={config.announcements || []} />
+      </div>
 
       {/* 用户登录状态栏 */}
       <div className="px-4 pt-2">
@@ -262,6 +269,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [showStationManager, setShowStationManager] = useState(false);
   const [showBusinessHoursManager, setShowBusinessHoursManager] = useState(false);
   const [showDataAnalytics, setShowDataAnalytics] = useState(false);
+  const [showAnnouncementManager, setShowAnnouncementManager] = useState(false);
 
   // 加载所有数据（带超时保护）
   const loadAllBookings = useCallback(async () => {
@@ -411,6 +419,18 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       setConfig(updated);
       setShowBusinessHoursManager(false);
       showMessage('success', '营业时间已更新');
+    } catch {
+      showMessage('error', '保存失败');
+      throw new Error('保存失败');
+    }
+  };
+
+  // 保存公告配置
+  const handleSaveAnnouncements = async (announcements: AppConfig['announcements']) => {
+    try {
+      const updated = await api.updateConfig({ announcements });
+      setConfig(updated);
+      showMessage('success', '公告已更新');
     } catch {
       showMessage('error', '保存失败');
       throw new Error('保存失败');
@@ -692,8 +712,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           <Button variant="outline" size="sm" onClick={() => setShowBusinessHoursManager(true)} className="text-orange-600 border-orange-200 hover:bg-orange-50">
             <span className="mr-1">⏰</span>营业时间
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowAnnouncementManager(true)} className="text-pink-600 border-pink-200 hover:bg-pink-50">
+            <span className="mr-1">📣</span>公告管理
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { setServerChanKey(config.serverChanKey || ''); setShowServerChanModal(true); }} className={cn("border-purple-200 hover:bg-purple-50", config.serverChanKey ? "text-purple-600" : "text-gray-400")}>
-            <span className="mr-1">📢</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
+            <span className="mr-1">🔔</span>微信通知{config.serverChanKey ? '已配置' : '未配置'}
           </Button>
         </div>
         <div className="flex items-center gap-2">
@@ -884,6 +907,14 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
       )}
+
+      {/* 公告管理弹窗 */}
+      <AnnouncementManager
+        isOpen={showAnnouncementManager}
+        onClose={() => setShowAnnouncementManager(false)}
+        announcements={config.announcements || []}
+        onSave={handleSaveAnnouncements}
+      />
 
       <Toaster position="top-center" />
     </div>

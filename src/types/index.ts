@@ -74,6 +74,19 @@ export interface BusinessHoursConfig {
   }>;
 }
 
+// 系统公告
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  isActive: boolean;
+  startDate?: string;  // 开始展示日期 YYYY-MM-DD
+  endDate?: string;    // 结束展示日期 YYYY-MM-DD
+  createdAt: string;
+  updatedAt: string;
+}
+
 // 系统配置
 export interface AppConfig {
   pricePerHour: number;
@@ -81,6 +94,7 @@ export interface AppConfig {
   bikeModels: BikeModel[];        // 型号列表
   businessHours: BusinessHoursConfig;  // 营业时间配置
   serverChanKey?: string;         // Server酱 SendKey
+  announcements?: Announcement[]; // 系统公告列表
   updatedAt: string;
 }
 
