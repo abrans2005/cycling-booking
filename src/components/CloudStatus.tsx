@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '@/lib/supabase';
 import { APP_VERSION } from '@/lib/version';
 import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
@@ -8,10 +8,11 @@ export function CloudStatus() {
   const [status, setStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [bookingCount, setBookingCount] = useState<number | null>(null);
   const [, setLastUpdate] = useState<string>('');
+  const didInit = useRef(false);
 
   console.log('[CloudStatus] Component rendered');
 
-  const checkConnection = async () => {
+  const checkConnection = useCallback(async () => {
     setStatus('checking');
     try {
       const today = new Date().toISOString().split('T')[0];
@@ -23,14 +24,23 @@ export function CloudStatus() {
       setStatus('offline');
       console.error('[CloudStatus] Connection failed:', err);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    checkConnection();
+    // 使用 ref 防止级联渲染
+    if (!didInit.current) {
+      didInit.current = true;
+      // 延迟执行初始检查，避免在渲染阶段调用 setState
+      const timeout = setTimeout(checkConnection, 0);
+      return () => clearTimeout(timeout);
+    }
+  }, [checkConnection]);
+
+  useEffect(() => {
     // 每30秒自动刷新
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [checkConnection]);
 
   return (
     <div className="flex items-center gap-3 bg-white px-3 py-2 rounded-lg shadow-sm border">

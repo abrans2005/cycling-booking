@@ -3,6 +3,28 @@ import type { Booking, AppConfig, User } from '@/types';
 import { sendBookingNotification, sendCancelNotification } from './serverchan';
 import { APP_VERSION } from './version';
 
+// 预约通知数据类型
+export interface BookingNotificationData {
+  memberName: string;
+  memberPhone: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  stationId: number;
+  bikeModel?: string;
+  price: number;
+  notes?: string;
+}
+
+// 取消预约通知数据类型
+export interface CancelNotificationData {
+  memberName: string;
+  memberPhone: string;
+  date: string;
+  startTime: string;
+  stationId: number;
+}
+
 console.log('[System] App Version:', APP_VERSION);
 console.log('[System] Storage Mode: CLOUD ONLY (Supabase)');
 
@@ -374,7 +396,7 @@ export const api = {
   },
 
   // 发送预约通知
-  sendBookingNotification: async (booking: any): Promise<boolean> => {
+  sendBookingNotification: async (booking: BookingNotificationData): Promise<boolean> => {
     const config = await api.getConfig();
     if (!config.serverChanKey) {
       console.log('Server酱未配置，跳过通知');
@@ -384,7 +406,7 @@ export const api = {
   },
 
   // 发送取消通知
-  sendCancelNotification: async (booking: any): Promise<boolean> => {
+  sendCancelNotification: async (booking: CancelNotificationData): Promise<boolean> => {
     const config = await api.getConfig();
     if (!config.serverChanKey) {
       console.log('Server酱未配置，跳过通知');

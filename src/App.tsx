@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import PullToRefresh from 'react-simple-pull-to-refresh';
 import { CloudStatus } from '@/components/CloudStatus';
 import { Header } from '@/sections/Header';
@@ -262,7 +262,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [showBusinessHoursManager, setShowBusinessHoursManager] = useState(false);
 
   // 加载所有数据
-  const loadAllBookings = async () => {
+  const loadAllBookings = useCallback(async () => {
     setLoading(true);
     try {
       const data = await api.getBookings();
@@ -272,22 +272,25 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // 加载配置
-  const loadConfig = async () => {
+  const loadConfig = useCallback(async () => {
     try {
       const data = await api.getConfig();
       setConfig(data);
     } catch {
       console.error('加载配置失败');
     }
-  };
+  }, []);
 
   useEffect(() => { 
-    loadAllBookings(); 
-    loadConfig();
-  }, []);
+    const loadData = async () => {
+      await loadAllBookings(); 
+      await loadConfig();
+    };
+    loadData();
+  }, [loadAllBookings, loadConfig]);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -873,11 +876,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
 // 主应用
 function App() {
   const [view, setView] = useState<'booking' | 'query' | 'adminLogin' | 'adminPanel'>('booking');
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-
-  useEffect(() => {
-    setIsAdminLoggedIn(sessionStorage.getItem('admin_logged_in') === 'true');
-  }, []);
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => 
+    sessionStorage.getItem('admin_logged_in') === 'true'
+  );
 
   const handleAdminClick = () => isAdminLoggedIn ? setView('adminPanel') : setView('adminLogin');
   const handleAdminLogin = () => { setIsAdminLoggedIn(true); setView('adminPanel'); };

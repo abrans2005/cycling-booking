@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/supabase';
 import { APP_VERSION } from '@/lib/version';
 
@@ -12,21 +12,7 @@ export function DebugInfo() {
   const [error, setError] = useState<string>('');
   const [showDetails, setShowDetails] = useState(false);
 
-  useEffect(() => {
-    // 检查环境变量
-    const url = import.meta.env.VITE_SUPABASE_URL;
-    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
-    setEnvInfo({
-      url: url ? `✅ 已设置` : '❌ 未设置',
-      key: key ? `✅ 已设置` : '❌ 未设置',
-    });
-    
-    // 自动测试连接
-    testConnection();
-  }, []);
-
-  const testConnection = async () => {
+  const testConnection = useCallback(async () => {
     setConnectionTest('测试中...');
     setError('');
     setBookingCount(null);
@@ -37,12 +23,31 @@ export function DebugInfo() {
       setBookingCount(bookings.length);
       setConnectionTest('✅ 云端连接正常');
       console.log('[DebugInfo] 今日预约数:', bookings.length);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setConnectionTest('❌ 连接失败');
-      setError(err.message || String(err));
+      setError(err instanceof Error ? err.message : String(err));
       console.error('[DebugInfo] Connection test failed:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // 检查环境变量
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    // 延迟状态更新到下一个事件循环，避免 React 19 级联渲染警告
+    const timer = setTimeout(() => {
+      setEnvInfo({
+        url: url ? `✅ 已设置` : '❌ 未设置',
+        key: key ? `✅ 已设置` : '❌ 未设置',
+      });
+      
+      // 自动测试连接
+      testConnection();
+    }, 0);
+    
+    return () => clearTimeout(timer);
+  }, [testConnection]);
 
   return (
     <div className="fixed bottom-4 right-4 bg-green-50 border border-green-300 p-3 rounded-lg shadow-lg z-50 max-w-xs">

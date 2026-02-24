@@ -4,18 +4,18 @@ import type { Booking, BookingFormData, AppConfig } from '@/types';
 
 // 生成未来14天的日期选项
 export const useDateOptions = () => {
-  return useCallback(() => {
+  return useMemo(() => {
     return Array.from({ length: 14 }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       return date;
     });
-  }, [])();
+  }, []);
 };
 
 // 生成时间段选项
 export const useTimeSlots = () => {
-  return useCallback(() => {
+  return useMemo(() => {
     return Array.from({ length: 33 }, (_, i) => {
       const hour = Math.floor(i / 2) + 6;
       const minute = (i % 2) * 30;
@@ -25,7 +25,7 @@ export const useTimeSlots = () => {
         label: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
       };
     });
-  }, [])();
+  }, []);
 };
 
 // 默认配置
@@ -58,8 +58,8 @@ export const useConfig = () => {
     try {
       const data = await api.getConfig();
       setConfig(data);
-    } catch {
-      console.error('加载配置失败');
+    } catch (err) {
+      console.error('加载配置失败:', err);
     } finally {
       setLoading(false);
     }
@@ -94,7 +94,7 @@ export const useBikeStations = () => {
       bikeModelId: s.bikeModelId,
       status: s.status,
     }));
-  }, [config?.stations]);
+  }, [config]);
 };
 
 // 主预约 Hook
@@ -129,7 +129,11 @@ export const useBooking = (pricePerHour: number = 100) => {
   useEffect(() => {
     if (!isInitialized.current) {
       isInitialized.current = true;
-      loadBookings();
+      // 延迟加载，避免 React 19 级联渲染警告
+      const timer = setTimeout(() => {
+        loadBookings();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [loadBookings]);
 

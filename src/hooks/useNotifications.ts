@@ -39,8 +39,12 @@ export const useNotifications = () => {
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setNotifications(parsed);
-        setUnreadCount(parsed.filter((n: BookingNotification) => !n.read).length);
+        // 延迟状态更新，避免 React 19 级联渲染警告
+        const timer = setTimeout(() => {
+          setNotifications(parsed);
+          setUnreadCount(parsed.filter((n: BookingNotification) => !n.read).length);
+        }, 0);
+        return () => clearTimeout(timer);
       } catch {
         // 忽略解析错误
       }
@@ -50,7 +54,11 @@ export const useNotifications = () => {
   // 保存通知到 localStorage
   useEffect(() => {
     localStorage.setItem('booking-notifications', JSON.stringify(notifications));
-    setUnreadCount(notifications.filter(n => !n.read).length);
+    // 延迟状态更新，避免 React 19 级联渲染警告
+    const timer = setTimeout(() => {
+      setUnreadCount(notifications.filter(n => !n.read).length);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [notifications]);
 
   // 添加新通知

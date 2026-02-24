@@ -24,15 +24,19 @@ export function BusinessHoursManager({ isOpen, onClose, businessHours, onSave }:
   const [newExceptionIsOpen, setNewExceptionIsOpen] = useState(true);
 
   // 每次打开弹窗时，从 props 重新加载数据
+  // 使用 setTimeout 延迟状态更新，避免 React 19 级联渲染警告
   useEffect(() => {
     if (isOpen) {
-      setDefaultOpen(businessHours.default.open);
-      setDefaultClose(businessHours.default.close);
-      setExceptions(businessHours.exceptions || {});
-      setNewExceptionDate('');
-      setNewExceptionOpen('06:00');
-      setNewExceptionClose('22:00');
-      setNewExceptionIsOpen(true);
+      const timer = setTimeout(() => {
+        setDefaultOpen(businessHours.default.open);
+        setDefaultClose(businessHours.default.close);
+        setExceptions(businessHours.exceptions || {});
+        setNewExceptionDate('');
+        setNewExceptionOpen('06:00');
+        setNewExceptionClose('22:00');
+        setNewExceptionIsOpen(true);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, businessHours]);
 

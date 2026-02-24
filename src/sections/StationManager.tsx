@@ -37,10 +37,14 @@ export function StationManager({
   // 当弹窗打开时，同步最新的数据
   useEffect(() => {
     if (isOpen) {
-      setEditingStations(stations);
-      setEditingModels(bikeModels);
-      setError('');
-      setExpandedStation(null);
+      // 使用 setTimeout 延迟 setState 调用，避免 React 19 级联渲染问题
+      const timer = setTimeout(() => {
+        setEditingStations(stations);
+        setEditingModels(bikeModels);
+        setError('');
+        setExpandedStation(null);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen, stations, bikeModels]);
 
@@ -144,7 +148,8 @@ export function StationManager({
     try {
       await onSave(editingStations, editingModels);
       onClose();
-    } catch {
+    } catch (err) {
+      console.error('保存失败:', err);
       setError('保存失败');
     } finally {
       setLoading(false);
