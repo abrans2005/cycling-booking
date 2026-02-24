@@ -224,7 +224,7 @@ export const api = {
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
 
-    return !(data || []).some((booking: any) => {
+    return !(data || []).some((booking: { start_time: string; end_time: string }) => {
       const [bStartHour, bStartMinute] = booking.start_time.split(':').map(Number);
       const [bEndHour, bEndMinute] = booking.end_time.split(':').map(Number);
       const bStartMinutes = bStartHour * 60 + bStartMinute;
@@ -266,7 +266,7 @@ export const api = {
 
   // 更新系统配置
   updateConfig: async (config: Partial<AppConfig>): Promise<AppConfig> => {
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       id: 1,
       updated_at: new Date().toISOString(),
     };

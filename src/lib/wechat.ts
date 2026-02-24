@@ -87,7 +87,7 @@ export const initWechatSDK = async (config: {
   
   return new Promise((resolve) => {
     // 动态加载微信 JS-SDK
-    if (!(window as any).wx) {
+    if (!(window as Record<string, unknown>).wx) {
       const script = document.createElement('script');
       script.src = 'https://res.wx.qq.com/open/js/jweixin-1.6.0.js';
       script.onload = () => {
@@ -102,8 +102,15 @@ export const initWechatSDK = async (config: {
 };
 
 // 配置微信 JS-SDK
-const configureWX = (config: any, callback: (success: boolean) => void) => {
-  const wx = (window as any).wx;
+interface WechatConfig {
+  appId: string;
+  timestamp: string;
+  nonceStr: string;
+  signature: string;
+}
+
+const configureWX = (config: WechatConfig, callback: (success: boolean) => void) => {
+  const wx = (window as Record<string, unknown>).wx as Record<string, ((...args: unknown[]) => void) | unknown>;
   if (!wx) {
     callback(false);
     return;
@@ -139,7 +146,7 @@ export const getWechatUserProfile = (): Promise<WechatUserInfo | null> => {
     // 注意：wx.getUserProfile 需要用户点击触发
     wx.getUserProfile({
       desc: '用于完善会员资料',
-      success: (res: any) => {
+      success: (res: { userInfo: { nickName: string; avatarUrl: string } }) => {
         const userInfo: WechatUserInfo = {
           nickname: res.userInfo.nickName,
           avatarUrl: res.userInfo.avatarUrl,
